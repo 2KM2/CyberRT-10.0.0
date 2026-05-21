@@ -1,0 +1,13 @@
+.git
+build
+install
+packages
+*.deb
+*.tar.gz
+*.zip
+cyber/*.pb.cc
+cyber/*.pb.h
+modules/**/*.pb.cc
+modules/**/*.pb.h
+**/__pycache__
+**/*.pyc
