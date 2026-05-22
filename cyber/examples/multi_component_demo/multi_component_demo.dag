@@ -1,0 +1,31 @@
+module_config {
+    module_library : "cyber/examples/multi_component_demo/libmulti_component_demo.so"
+
+    timer_components {
+        class_name : "SensorComponent"
+        config {
+            name : "sensor"
+            interval : 100
+        }
+    }
+
+    components {
+        class_name : "ProcessorComponent"
+        config {
+            name : "processor"
+            readers {
+                channel: "/demo/sensor"
+            }
+        }
+    }
+
+    components {
+        class_name : "DisplayComponent"
+        config {
+            name : "display"
+            readers {
+                channel: "/demo/result"
+            }
+        }
+    }
+}
