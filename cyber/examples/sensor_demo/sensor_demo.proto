@@ -1,0 +1,15 @@
+syntax = "proto2";
+
+package apollo.cyber.examples.sensor_demo;
+
+message SensorData {
+  optional uint64 timestamp = 1;
+  optional uint64 seq = 2;
+  optional bytes data = 3;
+}
+
+message ControlCommand {
+  optional uint64 timestamp = 1;
+  optional string cmd = 2;
+  optional double value = 3;
+}

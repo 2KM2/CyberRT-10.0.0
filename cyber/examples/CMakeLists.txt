@@ -30,3 +30,4 @@ target_link_libraries(cyber_example_service
 add_subdirectory(common_component_example)
 add_subdirectory(timer_component_example)
 add_subdirectory(multi_component_demo)
+add_subdirectory(sensor_demo)

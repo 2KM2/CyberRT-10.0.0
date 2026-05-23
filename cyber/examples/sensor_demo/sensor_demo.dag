@@ -1,0 +1,10 @@
+module_config {
+  module_library: "cyber/examples/sensor_demo/libsensor_component.so"
+  timer_components {
+    class_name: "SensorComponent"
+    config {
+      name: "sensor"
+      interval: 100  # 10Hz
+    }
+  }
+}
