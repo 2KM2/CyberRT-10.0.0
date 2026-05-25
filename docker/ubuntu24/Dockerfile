@@ -39,8 +39,17 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
-    && useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash "${USERNAME}" \
+RUN EXISTING_GROUP="$(getent group "${USER_GID}" | cut -d: -f1 || true)" \
+    && if [ -z "${EXISTING_GROUP}" ]; then groupadd --gid "${USER_GID}" "${USERNAME}"; fi \
+    && EXISTING_USER="$(getent passwd "${USER_UID}" | cut -d: -f1 || true)" \
+    && if [ -n "${EXISTING_USER}" ]; then \
+         if [ "${EXISTING_USER}" != "${USERNAME}" ]; then \
+           usermod --login "${USERNAME}" --home "/home/${USERNAME}" --move-home "${EXISTING_USER}"; \
+         fi; \
+         usermod --gid "${USER_GID}" "${USERNAME}"; \
+       else \
+         useradd --uid "${USER_UID}" --gid "${USER_GID}" --create-home --shell /bin/bash "${USERNAME}"; \
+       fi \
     && usermod -aG sudo "${USERNAME}" \
     && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >/etc/sudoers.d/${USERNAME} \
     && chmod 0440 /etc/sudoers.d/${USERNAME}
