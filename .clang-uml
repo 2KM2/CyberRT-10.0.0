@@ -1,0 +1,43 @@
+compilation_database_dir: build
+output_directory: docs/diagrams
+
+diagrams:
+  cyber_class:
+    type: class
+    glob:
+      - cyber/**/*.cc
+      - cyber/**/*.h
+    using_namespace:
+      - apollo::cyber
+      - cyber
+    include:
+      namespaces:
+        - apollo::cyber
+        - cyber
+    exclude:
+      namespaces:
+        - apollo::cyber::proto
+        - cyber::proto
+
+  transport_overview:
+    type: class
+    glob:
+      - cyber/transport/**/*.cc
+    using_namespace:
+      - apollo::cyber
+      - apollo::cyber::transport
+      - cyber
+      - transport
+    include:
+      namespaces:
+        - apollo::cyber
+        - apollo::cyber::transport
+        - cyber
+        - transport
+    exclude:
+      namespaces:
+        - apollo::cyber::proto
+        - cyber::proto
+      paths:
+        - cyber/transport/integration_test/**
+        - cyber/transport/**/*_test.cc

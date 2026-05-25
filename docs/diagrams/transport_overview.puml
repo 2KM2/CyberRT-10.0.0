@@ -1,0 +1,2932 @@
+@startuml
+class "transport::Identity" as C_0004791320863494540557
+class C_0004791320863494540557 {
++Identity(bool need_generate = true) : void
++Identity(const Identity & another) : void
++~Identity() : void
+..
++operator=(const Identity & another) : Identity &
+..
++operator!=(const Identity & another) const : bool
++operator==(const Identity & another) const : bool
+..
++HashValue() const : uint64_t
++Length() const : size_t
++ToString() const : std::string
+-Update() : void
++data() const : const char *
++set_data(const char * data) : void
+__
+-data_ : char[8]
+-hash_value_ : uint64_t
+}
+class "transport::Endpoint" as C_0008815281863053388442
+class C_0008815281863053388442 {
++Endpoint(const RoleAttributes & attr) : void
++~Endpoint() : void
+..
++attributes() const : const RoleAttributes &
++id() const : const Identity &
+__
+#attr_ : RoleAttributes
+#enabled_ : bool
+#id_ : Identity
+}
+class "transport::MessageInfo" as C_0006842762886955524119
+class C_0006842762886955524119 {
++MessageInfo() : void
++MessageInfo(const Identity & sender_id, uint64_t seq_num) : void
++MessageInfo(const Identity & sender_id, uint64_t seq_num, const Identity & spare_id) : void
++MessageInfo(const MessageInfo & another) : void
++~MessageInfo() : void
+..
++operator=(const MessageInfo & another) : MessageInfo &
+..
++operator!=(const MessageInfo & another) const : bool
++operator==(const MessageInfo & another) const : bool
+..
++DeserializeFrom(const std::string & src) : bool
++DeserializeFrom(const char * src, std::size_t len) : bool
++SerializeTo(std::string * dst) const : bool
++SerializeTo(char * dst, std::size_t len) const : bool
++channel_id() const : uint64_t
++send_time() const : uint64_t
++sender_id() const : const Identity &
++seq_num() const : uint64_t
++set_channel_id(uint64_t channel_id) : void
++set_send_time(uint64_t send_time) : void
++set_sender_id(const Identity & sender_id) : void
++set_seq_num(uint64_t seq_num) : void
++set_spare_id(const Identity & spare_id) : void
++spare_id() const : const Identity &
+__
+-channel_id_ : uint64_t
+{static} +kSize : const std::size_t
+-send_time_ : uint64_t
+-sender_id_ : Identity
+-seq_num_ : uint64_t
+-spare_id_ : Identity
+}
+abstract "transport::ListenerHandlerBase" as C_0015201386975330476275
+abstract C_0015201386975330476275 {
++ListenerHandlerBase() : void
++~ListenerHandlerBase() : void
+..
+{abstract} +Disconnect(uint64_t self_id) = 0 : void
+{abstract} +Disconnect(uint64_t self_id, uint64_t oppo_id) = 0 : void
++IsRawMessage() const : bool
+{abstract} +RunFromString(const std::string & str, const MessageInfo & msg_info) = 0 : void
+__
+#is_raw_message_ : bool
+}
+class "transport::ListenerHandler<MessageT>" as C_0011344423027618631854
+class C_0011344423027618631854 {
++ListenerHandler() : void
++~ListenerHandler() : void
+..
++Connect(uint64_t self_id, const Listener & listener) : void
++Connect(uint64_t self_id, uint64_t oppo_id, const Listener & listener) : void
++Disconnect(uint64_t self_id) : void
++Disconnect(uint64_t self_id, uint64_t oppo_id) : void
++Run(const Message & msg, const MessageInfo & msg_info) : void
++RunFromString(const std::string & str, const MessageInfo & msg_info) : void
+__
+-rw_lock_ : base::AtomicRWLock
+-signal_ : MessageSignal
+-signal_conns_ : ConnectionMap
+-signals_ : MessageSignalMap
+-signals_conns_ : std::unordered_map<uint64_t,ConnectionMap>
+}
+class "transport::Dispatcher" as C_0009142282634570950050
+class C_0009142282634570950050 {
++Dispatcher() : void
++~Dispatcher() : void
+..
++AddListener<MessageT>(const RoleAttributes & self_attr, const MessageListener<MessageT> & listener) : void
++AddListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr, const MessageListener<MessageT> & listener) : void
++HasChannel(uint64_t channel_id) : bool
++RemoveListener<MessageT>(const RoleAttributes & self_attr) : void
++RemoveListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr) : void
++Shutdown() : void
+__
+#is_shutdown_ : std::atomic<bool>
+#msg_listeners_ : AtomicHashMap<uint64_t,ListenerHandlerBasePtr>
+#rw_lock_ : base::AtomicRWLock
+}
+class "transport::ChannelChain" as C_0008685721743863358775
+class C_0008685721743863358775 {
++AddListener<MessageT>(uint64_t self_id, uint64_t channel_id, const std::string & message_type, const MessageListener<MessageT> & listener) : _Bool
++AddListener<MessageT>(uint64_t self_id, uint64_t oppo_id, uint64_t channel_id, const std::string & message_type, const MessageListener<MessageT> & listener) : _Bool
+-GetHandler<MessageT>(uint64_t channel_id, const std::string & message_type, BaseHandlersType * handlers) : std::pair<std::shared_ptr<ListenerHandler<MessageT> >, _Bool>
+-RemoveHandler(int64_t channel_id, const std::string message_type, BaseHandlersType * handlers) : ListenerHandlerBasePtr
++RemoveListener<MessageT>(uint64_t self_id, uint64_t channel_id, const std::string & message_type) : void
++RemoveListener<MessageT>(uint64_t self_id, uint64_t oppo_id, uint64_t channel_id, const std::string & message_type) : void
++Run<MessageT>(uint64_t self_id, uint64_t channel_id, const std::string & message_type, const std::shared_ptr<MessageT> & message, const MessageInfo & message_info) : void
++Run<MessageT>(uint64_t self_id, uint64_t oppo_id, uint64_t channel_id, const std::string & message_type, const std::shared_ptr<MessageT> & message, const MessageInfo & message_info) : void
+-Run<MessageT>(const uint64_t channel_id, const std::string & message_type, const BaseHandlersType & handlers, const std::shared_ptr<MessageT> & message, const MessageInfo & message_info) : void
+__
+-handlers_ : BaseHandlersType
+-oppo_handlers_ : std::map<uint64_t,BaseHandlersType>
+-oppo_rw_lock_ : base::AtomicRWLock
+-rw_lock_ : base::AtomicRWLock
+}
+class "transport::IntraDispatcher" as C_0017945448918823626443
+class C_0017945448918823626443 {
+-IntraDispatcher() : void
+-IntraDispatcher(const IntraDispatcher &) = deleted : void
++~IntraDispatcher() : void
+..
+-operator=(const IntraDispatcher &) = deleted : IntraDispatcher &
+..
++AddListener<MessageT>(const RoleAttributes & self_attr, const MessageListener<MessageT> & listener) : void
++AddListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr, const MessageListener<MessageT> & listener) : void
+{static} +CleanUp() : void
+-GetHandler<MessageT>(uint64_t channel_id) : std::shared_ptr<ListenerHandler<MessageT> >
+{static} +Instance(bool create_if_needed = true) : IntraDispatcher *
++OnMessage<MessageT>(uint64_t channel_id, const std::shared_ptr<MessageT> & message, const MessageInfo & message_info) : void
++RemoveListener<MessageT>(const RoleAttributes & self_attr) : void
++RemoveListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr) : void
+__
+-chain_ : ChannelChainPtr
+}
+class "transport::ReadableInfo" as C_0006497031752288891055
+class C_0006497031752288891055 {
++ReadableInfo() : void
++ReadableInfo(uint64_t host_id, int32_t block_index, uint64_t channel_id, int32_t arena_block_index = -1) : void
++~ReadableInfo() : void
+..
++operator=(const ReadableInfo & other) : ReadableInfo &
+..
++DeserializeFrom(const std::string & src) : bool
++DeserializeFrom(const char * src, std::size_t len) : bool
++SerializeTo(std::string * dst) const : bool
++arena_block_index() const : int32_t
++block_index() const : int32_t
++channel_id() const : uint64_t
++host_id() const : uint64_t
++set_arena_block_index(int32_t arena_block_index) : void
++set_block_index(int32_t block_index) : void
++set_channel_id(uint64_t channel_id) : void
++set_host_id(uint64_t host_id) : void
+__
+-arena_block_index_ : int32_t
+-block_index_ : int32_t
+-channel_id_ : uint64_t
+-host_id_ : uint64_t
+{static} +kSize : const size_t
+}
+abstract "transport::NotifierBase" as C_0009622133662289176604
+abstract C_0009622133662289176604 {
++~NotifierBase() = default : void
+..
+{abstract} +Listen(int timeout_ms, ReadableInfo * info) = 0 : bool
+{abstract} +Notify(const ReadableInfo & info) = 0 : bool
+{abstract} +Shutdown() = 0 : void
+__
+}
+class "transport::NotifierFactory" as C_0006266386219385012804
+class C_0006266386219385012804 {
+{static} -CreateConditionNotifier() : NotifierPtr
+{static} -CreateMulticastNotifier() : NotifierPtr
+{static} +CreateNotifier() : NotifierPtr
+__
+}
+class "transport::ArenaAddressNode" as C_0005041741934714673715
+class C_0005041741934714673715 {
+__
++index_ : uint64_t
++key_ : uint64_t
++left_ : struct ArenaAddressNode *
++parent_ : struct ArenaAddressNode *
++ref_count_ : std::atomic<uint64_t>
++right_ : struct ArenaAddressNode *
+}
+class "transport::ArenaAddressAllocatorMeta" as C_0012683544157905053205
+class C_0012683544157905053205 {
+__
++bytes_ : uint8_t[128]
++struct_ : ArenaAddressAllocatorMeta::(struct_)
+}
+class "transport::ArenaAddressAllocatorMeta::(struct_)" as C_0012548613078892573017
+class C_0012548613078892573017 {
+__
++address_segment_size_ : uint64_t
++allocated_index_ : uint64_t
++base_address_ : void *
++capacity_ : uint64_t
++occupied_ : std::atomic<bool>
++reclaim_stack_top_ : uint64_t
++ref_count_ : std::atomic<uint64_t>
++root_ : ArenaAddressNode *
++version_ : uint64_t
+}
+class "transport::ArenaAddressAllocator" as C_0011690857371869545599
+class C_0011690857371869545599 {
++ArenaAddressAllocator() : void
++~ArenaAddressAllocator() : void
+..
++Allocate(uint64_t key) : void *
++Deallocate(uint64_t key) : void
++FindNode(ArenaAddressNode * node, uint64_t key) : ArenaAddressNode *
++FindOrInsertNode(ArenaAddressNode * node, ArenaAddressNode ** node_p, ArenaAddressNode * parent, uint64_t key) : ArenaAddressNode *
++Init(uint64_t capacity, void * base_address, uint64_t address_segment_size) : bool
++NewNode(uint64_t key) : ArenaAddressNode *
++Open(uint64_t key, void * base_address, void ** shm_address) : bool
++OpenMetaShm(uint64_t capacity, void * base_address, uint64_t address_segment_size) : bool
++OpenNodeShm(uint64_t capacity, void * base_address, uint64_t address_segment_size) : bool
++OpenOrCreate(uint64_t key, uint64_t size, void * base_address, void ** shm_address, bool * is_created) : bool
++OpenOrCreate(uint64_t capacity, void * base_address, uint64_t address_segment_size) : bool
++ReclaimNode(ArenaAddressNode * node) : void
++RemoveNode(ArenaAddressNode * node, ArenaAddressNode ** node_addr, uint64_t key) : void
++SwapNodePosition(ArenaAddressNode * x, ArenaAddressNode ** x_p, ArenaAddressNode * y, ArenaAddressNode ** y_p) : void
++TreeBalanceFactor(ArenaAddressNode * node) : int64_t
++TreeHeight(ArenaAddressNode * node) : uint64_t
++TreeMax(ArenaAddressNode * node, ArenaAddressNode *** node_pp) : ArenaAddressNode *
++TreeMin(ArenaAddressNode * node, ArenaAddressNode *** node_pp) : ArenaAddressNode *
++TreeRebalance(ArenaAddressNode * node, ArenaAddressNode ** node_p) : ArenaAddressNode *
++TreeRotateLeft(ArenaAddressNode * node, ArenaAddressNode ** node_p) : ArenaAddressNode *
++TreeRotateLeftRight(ArenaAddressNode * node, ArenaAddressNode ** node_p) : ArenaAddressNode *
++TreeRotateRight(ArenaAddressNode * node, ArenaAddressNode ** node_p) : ArenaAddressNode *
++TreeRotateRightLeft(ArenaAddressNode * node, ArenaAddressNode ** node_p) : ArenaAddressNode *
+__
+-meta_ : ArenaAddressAllocatorMeta *
+-meta_shm_address_ : void *
+-meta_shm_key_ : uint64_t
+-node_shm_address_ : void *
+-node_shm_key_ : uint64_t
+-nodes_ : ArenaAddressNode *
+-reclaim_stack_ : uint64_t *
+-root_ : ArenaAddressNode *
+}
+class "transport::Block" as C_0004002652622412309656
+class C_0004002652622412309656 {
++Block() : void
++~Block() : void
+..
+-ReleaseReadLock() : void
+-ReleaseWriteLock() : void
+-TryLockForRead() : bool
+-TryLockForWrite() : bool
++msg_info_size() const : uint64_t
++msg_size() const : uint64_t
++set_msg_info_size(uint64_t msg_info_size) : void
++set_msg_size(uint64_t msg_size) : void
+__
+{static} +kMaxTryLockTimes : const int32_t
+{static} +kRWLockFree : const int32_t
+{static} +kWriteExclusive : const int32_t
+-lock_num_ : std::atomic<int32_t>
+-msg_info_size_ : uint64_t
+-msg_size_ : uint64_t
+}
+class "transport::ShmConf" as C_0013315542204640020794
+class C_0013315542204640020794 {
++ShmConf() : void
++ShmConf(const uint64_t & real_msg_size) : void
++~ShmConf() : void
+..
+-GetBlockBufSize(const uint64_t & ceiling_msg_size) : uint64_t
+-GetBlockNum(const uint64_t & ceiling_msg_size) : uint32_t
+-GetCeilingMessageSize(const uint64_t & real_msg_size) : uint64_t
++Update(const uint64_t & real_msg_size) : void
++block_buf_size() : const uint64_t &
++block_num() : const uint32_t &
++ceiling_msg_size() : const uint64_t &
++managed_shm_size() : const uint64_t &
+__
+{static} +ARENA_BLOCK_NUM : const uint32_t
+{static} +ARENA_MESSAGE_SIZE : const uint64_t
+{static} -BLOCK_NUM_128K : const uint32_t
+{static} -BLOCK_NUM_16K : const uint32_t
+{static} -BLOCK_NUM_16M : const uint32_t
+{static} -BLOCK_NUM_1M : const uint32_t
+{static} -BLOCK_NUM_8M : const uint32_t
+{static} -BLOCK_NUM_MORE : const uint32_t
+{static} -BLOCK_SIZE : const uint64_t
+{static} -EXTRA_SIZE : const uint64_t
+{static} -MESSAGE_INFO_SIZE : const uint64_t
+{static} -MESSAGE_SIZE_128K : const uint64_t
+{static} -MESSAGE_SIZE_16K : const uint64_t
+{static} -MESSAGE_SIZE_16M : const uint64_t
+{static} -MESSAGE_SIZE_1M : const uint64_t
+{static} -MESSAGE_SIZE_8M : const uint64_t
+{static} -MESSAGE_SIZE_MORE : const uint64_t
+{static} -STATE_SIZE : const uint64_t
+-block_buf_size_ : uint64_t
+-block_num_ : uint32_t
+-ceiling_msg_size_ : uint64_t
+-managed_shm_size_ : uint64_t
+}
+class "transport::State" as C_0003682446954266325154
+class C_0003682446954266325154 {
++State(const uint64_t & ceiling_msg_size) : void
++~State() : void
+..
++DecreaseReferenceCounts() : void
++FetchAddArenaSeq(uint32_t diff) : uint32_t
++FetchAddSeq(uint32_t diff) : uint32_t
++IncreaseReferenceCounts() : void
++arena_seq() : uint32_t
++ceiling_msg_size() : uint64_t
++need_remap() : bool
++reference_counts() : uint32_t
++seq() : uint32_t
++set_need_remap(bool need) : void
+__
+-arena_seq_ : std::atomic<uint32_t>
+-ceiling_msg_size_ : std::atomic<uint64_t>
+-need_remap_ : std::atomic<bool>
+-reference_count_ : std::atomic<uint32_t>
+-seq_ : std::atomic<uint32_t>
+}
+class "transport::WritableBlock" as C_0007085174862166452329
+class C_0007085174862166452329 {
+__
++block : Block *
++buf : uint8_t *
++index : uint32_t
+}
+abstract "transport::Segment" as C_0008022956656709429263
+abstract C_0008022956656709429263 {
++Segment(uint64_t channel_id) : void
++~Segment() : void
+..
++AcquireArenaBlockToRead(ReadableBlock * readable_block) : bool
++AcquireArenaBlockToWrite(std::size_t msg_size, WritableBlock * writable_block) : bool
++AcquireBlockToRead(ReadableBlock * readable_block) : bool
++AcquireBlockToWrite(std::size_t msg_size, WritableBlock * writable_block) : bool
+#Destroy() : bool
++GetManagedShm() : void *
+-GetNextArenaWritableBlockIndex() : uint32_t
+-GetNextWritableBlockIndex() : uint32_t
++InitOnly(uint64_t message_size) : bool
++LockArenaBlockForReadByIndex(uint64_t block_index) : bool
++LockArenaBlockForWriteByIndex(uint64_t block_index) : bool
++LockBlockForReadByIndex(uint64_t block_index) : bool
++LockBlockForWriteByIndex(uint64_t block_index) : bool
+{abstract} #OpenOnly() = 0 : bool
+{abstract} #OpenOrCreate() = 0 : bool
+-Recreate(const uint64_t & msg_size) : bool
++ReleaseArenaBlockForReadByIndex(uint64_t block_index) : bool
++ReleaseArenaBlockForWriteByIndex(uint64_t block_index) : bool
++ReleaseArenaReadBlock(const ReadableBlock & readable_block) : void
++ReleaseArenaWrittenBlock(const WritableBlock & writable_block) : void
++ReleaseBlockForReadByIndex(uint64_t block_index) : bool
++ReleaseBlockForWriteByIndex(uint64_t block_index) : bool
++ReleaseReadBlock(const ReadableBlock & readable_block) : void
++ReleaseWrittenBlock(const WritableBlock & writable_block) : void
+-Remap() : bool
+{abstract} #Remove() = 0 : bool
+{abstract} #Reset() = 0 : void
+__
+#arena_block_buf_addrs_ : std::unordered_map<uint32_t,uint8_t *>
+#arena_block_buf_lock_ : std::mutex
+#arena_blocks_ : Block *
+#block_buf_addrs_ : std::unordered_map<uint32_t,uint8_t *>
+#block_buf_lock_ : std::mutex
+#blocks_ : Block *
+#channel_id_ : uint64_t
+#conf_ : ShmConf
+#init_ : bool
+#managed_shm_ : void *
+#state_ : State *
+}
+class "transport::ArenaSegmentState" as C_0014366587777039454946
+class C_0014366587777039454946 {
+__
++bytes_ : uint8_t[128]
++struct_ : ArenaSegmentState::(struct_)
+}
+class "transport::ArenaSegmentState::(struct_)" as C_0009388175452461407785
+class C_0009388175452461407785 {
+__
++auto_extended_ : std::atomic<bool>
++block_num_ : std::atomic<uint64_t>
++message_seq_ : std::atomic<uint64_t>
++message_size_ : std::atomic<uint64_t>
++mutex_ : std::mutex
++ref_count_ : std::atomic<uint64_t>
+}
+class "transport::ArenaSegmentBlockDescriptor" as C_0009049567210916562923
+class C_0009049567210916562923 {
+__
++bytes_ : uint8_t[128]
++struct_ : ArenaSegmentBlockDescriptor::(struct_)
+}
+class "transport::ArenaSegmentBlockDescriptor::(struct_)" as C_0012919604600318543884
+class C_0012919604600318543884 {
+__
++read_write_mutex_ : base::PthreadRWLock
++reading_ref_count_ : std::atomic<uint64_t>
++size_ : uint64_t
++writing_ref_count_ : std::atomic<uint64_t>
+}
+class "transport::ArenaSegmentBlock" as C_0010098703409307973343
+class C_0010098703409307973343 {
+__
+{static} +kMaxTryLockTimes : const int32_t
+{static} +kRWLockFree : const int32_t
+{static} +kWriteExclusive : const int32_t
++lock_num_ : std::atomic<int32_t>
++size_ : uint64_t
+}
+class "transport::ArenaSegmentBlockInfo" as C_0007184633418620411319
+class C_0007184633418620411319 {
+__
++block_ : ArenaSegmentBlock *
++block_buffer_address_ : void *
++block_index_ : uint64_t
+}
+class "transport::ArenaSegment" as C_0004975293191435240557
+class C_0004975293191435240557 {
++ArenaSegment() : void
++ArenaSegment(uint64_t channel_id) : void
++ArenaSegment(uint64_t channel_id, void * base_address) : void
++ArenaSegment(uint64_t channel_id, uint64_t message_size, uint64_t block_num, void * base_address) : void
++~ArenaSegment() : void
+..
++AcquireBlockToRead(ArenaSegmentBlockInfo * block_info) : bool
++AcquireBlockToWrite(uint64_t size, ArenaSegmentBlockInfo * block_info) : bool
++AddBlockReadLock(uint64_t block_index) : bool
++AddBlockWriteLock(uint64_t block_index) : bool
++GetNextWritableBlockIndex() : uint64_t
++GetShmAddress() : void *
++Init(uint64_t message_size, uint64_t block_num) : bool
++Open(uint64_t message_size, uint64_t block_num) : bool
++OpenOrCreate(uint64_t message_size, uint64_t block_num) : bool
++ReleaseReadBlock(const ArenaSegmentBlockInfo & block_info) : void
++ReleaseWrittenBlock(const ArenaSegmentBlockInfo & block_info) : void
++RemoveBlockReadLock(uint64_t block_index) : void
++RemoveBlockWriteLock(uint64_t block_index) : void
+__
++arena_block_address_ : std::vector<uint64_t>
++arena_buffer_address_ : void *
++arenas_ : std::vector<std::shared_ptr<google::protobuf::Arena>>
++base_address_ : void *
++blocks_ : ArenaSegmentBlock *
++channel_id_ : uint64_t
++key_id_ : uint64_t
++message_capacity_ : uint64_t
++shared_buffer_arena_ : std::shared_ptr<google::protobuf::Arena>
++shm_address_ : void *
++state_ : ArenaSegmentState *
+}
+class "transport::ExtendedStruct" as C_0010570260476383246383
+class C_0010570260476383246383 {
+__
++bytes_ : uint8_t[256]
++meta_ : ExtendedStruct::(meta_)
+}
+class "transport::ExtendedStruct::(meta_)" as C_0009839650499846034579
+class C_0009839650499846034579 {
+__
++address_offset_ : uint64_t
++channel_id_ : uint64_t
++related_blocks_ : uint64_t[4]
++related_blocks_size_ : uint64_t
+}
+class "transport::ProtobufArenaManagerMeta" as C_0016942279582395589846
+class C_0016942279582395589846 {
+__
++bytes_ : uint8_t[256]
++struct_ : ProtobufArenaManagerMeta::(struct_)
+}
+class "transport::ProtobufArenaManagerMeta::(struct_)" as C_0012566397486134208003
+class C_0012566397486134208003 {
+__
++base_address_ : uint64_t
++block_num_ : uint64_t
++block_size_ : uint64_t
++extended_struct_num_ : uint64_t
++extended_struct_seq_ : uint64_t
++extended_struct_size_ : uint64_t
++message_num_ : uint64_t
++message_seq_ : uint64_t
++message_size_ : uint64_t
++segment_size_ : uint64_t
++version_ : uint64_t
+}
+class "transport::ProtobufArenaManager" as C_0012314085183876676681
+class C_0012314085183876676681 {
+-ProtobufArenaManager() : void
+-ProtobufArenaManager(const ProtobufArenaManager &) = deleted : void
++~ProtobufArenaManager() : void
+..
+-operator=(const ProtobufArenaManager &) = deleted : ProtobufArenaManager &
+..
++AcquireArenaMessage<M,typename std::enable_if<!google::protobuf::class Arena::is_arena_constructable<M>::value, M>::type *=nullptr>(uint64_t channel_id, std::shared_ptr<M> & ret_msg) : void
++AcquireArenaMessage<M,typename std::enable_if<google::protobuf::class Arena::is_arena_constructable<M>::value, M>::type *=nullptr>(uint64_t channel_id, std::shared_ptr<M> & ret_msg) : void
++AddMessageRelatedBlock(message::ArenaMessageWrapper * wrapper, uint64_t block_index) : void
+{static} -ArenaAlloc(uint64_t size) : void *
+{static} -ArenaDealloc(void * addr, uint64_t size) : void
+{static} +CleanUp() : void
++Destroy() : bool
++Enable() : bool
++EnableSegment(uint64_t channel_id) : bool
++GetAvailableBuffer(uint64_t channel_id) : void *
++GetBaseAddress(const message::ArenaMessageWrapper * wrapper) : uint64_t
++GetMessage(message::ArenaMessageWrapper * wrapper) : void *
++GetMessageAddressOffset(message::ArenaMessageWrapper * wrapper) : uint64_t
++GetMessageChannelId(message::ArenaMessageWrapper * wrapper) : uint64_t
++GetMessageRelatedBlocks(message::ArenaMessageWrapper * wrapper) : std::vector<uint64_t>
++GetSegment(uint64_t channel_id) : std::shared_ptr<ArenaSegment>
+{static} +Instance(bool create_if_needed = true) : ProtobufArenaManager *
++RegisterQueue<T>(uint64_t channel_id, uint64_t size) : _Bool
++ResetMessageRelatedBlocks(message::ArenaMessageWrapper * wrapper) : void
++SetMessage(message::ArenaMessageWrapper * wrapper, const void * message) : void *
++SetMessageAddressOffset(message::ArenaMessageWrapper * wrapper, uint64_t offset) : void
++SetMessageChannelId(message::ArenaMessageWrapper * wrapper, uint64_t channel_id) : void
+__
+-address_allocator_ : std::shared_ptr<ArenaAddressAllocator>
+{static} -arena_alloc_cb_ : ArenaAllocCallback
+-arena_alloc_cb_mutex_ : std::mutex
+-arena_buffer_callbacks_ : std::unordered_map<uint64_t,std::function<void ()>>
+-init_ : bool
+-managed_wrappers_ : std::unordered_map<uint64_t,uint64_t>
+-non_arena_buffers_ : std::unordered_map<uint64_t,void *>
+-segments_ : std::unordered_map<uint64_t,std::shared_ptr<ArenaSegment>>
+-segments_mutex_ : std::mutex
+}
+class "transport::SegmentFactory" as C_0000701954478867669936
+class C_0000701954478867669936 {
+{static} +CreateSegment(uint64_t channel_id) : SegmentPtr
+__
+}
+class "transport::ShmDispatcher" as C_0011832155879086229817
+class C_0011832155879086229817 {
+-ShmDispatcher() : void
+-ShmDispatcher(const ShmDispatcher &) = deleted : void
++~ShmDispatcher() : void
+..
+-operator=(const ShmDispatcher &) = deleted : ShmDispatcher &
+..
++AddArenaListener<MessageT>(const RoleAttributes & self_attr, const MessageListener<MessageT> & listener) : void
++AddArenaListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr, const MessageListener<MessageT> & listener) : void
++AddListener<MessageT>(const RoleAttributes & self_attr, const MessageListener<MessageT> & listener) : void
++AddListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr, const MessageListener<MessageT> & listener) : void
+-AddSegment(const RoleAttributes & self_attr) : void
+{static} +CleanUp() : void
+-Init() : bool
+{static} +Instance(bool create_if_needed = true) : ShmDispatcher *
+-OnArenaMessage(uint64_t channel_id, const std::shared_ptr<ReadableBlock> & rb, const MessageInfo & msg_info) : void
+-OnMessage(uint64_t channel_id, const std::shared_ptr<ReadableBlock> & rb, const MessageInfo & msg_info) : void
+-ReadArenaMessage(uint64_t channel_id, uint32_t arena_block_index) : void
+-ReadMessage(uint64_t channel_id, uint32_t block_index) : void
++Shutdown() : void
+-ThreadFunc() : void
+__
+-arena_msg_listeners_ : AtomicHashMap<uint64_t,ListenerHandlerBasePtr>
+-arena_previous_indexes_ : std::unordered_map<uint64_t,uint32_t>
+-host_id_ : uint64_t
+-notifier_ : NotifierPtr
+-previous_indexes_ : std::unordered_map<uint64_t,uint32_t>
+-segments_ : SegmentContainer
+-segments_lock_ : AtomicRWLock
+-thread_ : std::thread
+}
+class "transport::UnderlayMessage" as C_0008376145411402703009
+class C_0008376145411402703009 {
++UnderlayMessage() : void
++UnderlayMessage(const UnderlayMessage & x) : void
++UnderlayMessage(UnderlayMessage && x) : void
++~UnderlayMessage() : void
+..
++operator=(const UnderlayMessage & x) : UnderlayMessage &
++operator=(UnderlayMessage && x) : UnderlayMessage &
+..
++data(const std::string & _data) : void
++data(std::string && _data) : void
++data() const : const std::string &
++data() : std::string &
++deserialize(eprosima::fastcdr::Cdr & cdr) : void
+{static} +getCdrSerializedSize(const UnderlayMessage & data, size_t current_alignment = 0) : size_t
+{static} +getKeyMaxCdrSerializedSize(size_t current_alignment = 0) : size_t
+{static} +getMaxCdrSerializedSize(size_t current_alignment = 0) : size_t
+{static} +isKeyDefined() : bool
++seq(uint64_t _seq) : void
++seq() const : uint64_t
++seq() : uint64_t &
++serialize(eprosima::fastcdr::Cdr & cdr) const : void
++serializeKey(eprosima::fastcdr::Cdr & cdr) const : void
++timestamp() : uint64_t &
++timestamp() const : uint64_t
++timestamp(uint64_t _timestamp) : void
+__
+-m_data : std::string
+-m_seq : uint64_t
+-m_timestamp : uint64_t
+}
+class "transport::UnderlayMessageType" as C_0005273721986801564886
+class C_0005273721986801564886 {
++UnderlayMessageType() : void
++~UnderlayMessageType() : void
+..
++createData() : void *
++deleteData(void * data) : void
++deserialize(eprosima::fastrtps::rtps::SerializedPayload_t * payload, void * data) : bool
++getKey(void * data, eprosima::fastrtps::rtps::InstanceHandle_t * ihandle, bool force_md5 = false) : bool
++getSerializedSizeProvider(void * data) : std::function<uint32_t ()>
++serialize(void * data, eprosima::fastrtps::rtps::SerializedPayload_t * payload) : bool
+__
++m_keyBuffer : unsigned char *
++m_md5 : MD5
+}
+class "transport::dispatcher::SubscriberListener" as C_0017119148899788107382
+class C_0017119148899788107382 {
++SubscriberListener(const rtps::subsciber_callback & callback) : void
++~SubscriberListener() : void
+..
++on_data_available(eprosima::fastdds::dds::DataReader * reader) : void
++on_subscription_matched(eprosima::fastdds::dds::DataReader * reader, const eprosima::fastdds::dds::SubscriptionMatchedStatus & info) : void
+__
+-callback_ : rtps::subsciber_callback
+-msg_info_ : MessageInfo
+-mutex_ : std::mutex
+}
+class "transport::QosFiller" as C_0014108548649192951132
+class C_0014108548649192951132 {
+{static} +FillInPubQos(const std::string & channel_name, const proto::QosProfile & qos, eprosima::fastdds::dds::PublisherQos * pub_qos) : bool
+{static} +FillInReaderQos(const std::string & channel_name, const proto::QosProfile & qos, eprosima::fastdds::dds::DataReaderQos * reader_qos) : bool
+{static} +FillInSubQos(const std::string & channel_name, const proto::QosProfile & qos, eprosima::fastdds::dds::SubscriberQos * sub_qos) : bool
+{static} +FillInTopicQos(const std::string & channel_name, const proto::QosProfile & qos, eprosima::fastdds::dds::TopicQos * topic_qos) : bool
+{static} +FillInWriterQos(const std::string & channel_name, const proto::QosProfile & qos, eprosima::fastdds::dds::DataWriterQos * writer_qos) : bool
+__
+}
+class "transport::AttributesFiller" as C_0012594739689620513668
+class C_0012594739689620513668 {
++AttributesFiller() : void
++~AttributesFiller() : void
+..
+{static} +FillInPubAttr(const std::string & channel_name, const QosProfile & qos, eprosima::fastrtps::PublisherAttributes * pub_attr) : bool
+{static} +FillInSubAttr(const std::string & channel_name, const QosProfile & qos, eprosima::fastrtps::SubscriberAttributes * sub_attr) : bool
+__
+}
+class "transport::Publisher" as C_0015208152318340823594
+class C_0015208152318340823594 {
++Publisher(const std::string & channel_name, const proto::QosProfile & qos, eprosima::fastdds::dds::DomainParticipant * participant) : void
+-Publisher(const Publisher &) = deleted : void
++~Publisher() : void
+..
+-operator=(const Publisher &) = deleted : Publisher &
+..
+-EnsureCreateTopic(const std::string & channel_name) : bool
++Init() : bool
++Shutdown() : void
++Write(const UnderlayMessage & msg, bool is_topo_msg = false) : bool
++Write(const UnderlayMessage & msg, const MessageInfo & msg_info, bool is_topo_msg = false) : bool
+__
+-channel_name_ : std::string
+-participant_ : eprosima::fastdds::dds::DomainParticipant *
+-publisher_ : eprosima::fastdds::dds::Publisher *
+-qos_ : proto::QosProfile
+-shutdown_ : std::atomic<bool>
+-topic_ : eprosima::fastdds::dds::Topic *
+-writer_ : eprosima::fastdds::dds::DataWriter *
+}
+class "transport::Subscriber" as C_0017229405527246968024
+class C_0017229405527246968024 {
++Subscriber(const std::string & name, const proto::QosProfile & qos, eprosima::fastdds::dds::DomainParticipant * participant, const rtps::subsciber_callback & callback) : void
+-Subscriber(const Subscriber &) = deleted : void
++~Subscriber() : void
+..
+-operator=(const Subscriber &) = deleted : Subscriber &
+..
+-EnsureCreateTopic(const std::string & channel_name) : bool
++Init() : bool
++Shutdown() : void
+__
+-callback_ : rtps::subsciber_callback
+-channel_name_ : std::string
+-participant_ : eprosima::fastdds::dds::DomainParticipant *
+-qos_ : proto::QosProfile
+-reader_ : eprosima::fastdds::dds::DataReader *
+-shutdown_ : std::atomic<bool>
+-subscriber_ : eprosima::fastdds::dds::Subscriber *
+-subscriber_listener_ : eprosima::fastdds::dds::SubscriberListener *
+-topic_ : eprosima::fastdds::dds::Topic *
+}
+class "transport::Participant" as C_0001453335640300835452
+class C_0001453335640300835452 {
++Participant(const std::string & name, int send_port, eprosima::fastdds::dds::DomainParticipantListener * listener = nullptr) : void
+-Participant(const Participant &) = deleted : void
++~Participant() : void
+..
+-operator=(const Participant &) = deleted : Participant &
+..
+-CheckIPVaild(std::string ip_env) : bool
+-CreateParticipant(const std::string & name, int send_port, eprosima::fastdds::dds::DomainParticipantListener * listener) : bool
++CreatePublisher(const std::string & channel_name, const proto::QosProfile & qos) : std::shared_ptr<transport::Publisher>
++CreateSubscriber(const std::string & channel_name, const proto::QosProfile & qos, const rtps::subsciber_callback & callback = nullptr) : std::shared_ptr<Subscriber>
++Init() : bool
++Shutdown() : void
++is_shutdown() const : bool
+__
+-listener_ : eprosima::fastdds::dds::DomainParticipantListener *
+-mutex_ : std::mutex
+-name_ : std::string
+-participant_ : eprosima::fastdds::dds::DomainParticipant *
+-publisher_map_ : PublisherPtrMap
+-publisher_mutex_ : std::mutex
+-send_port_ : int
+-shutdown_ : std::atomic<bool>
+-subscriber_map_ : SubscriberPtrMap
+-subscriber_mutex_ : std::mutex
+-type_support_ : eprosima::fastdds::dds::TypeSupport
+}
+class "transport::RtpsDispatcher" as C_0009127750826083060664
+class C_0009127750826083060664 {
+-RtpsDispatcher() : void
+-RtpsDispatcher(const RtpsDispatcher &) = deleted : void
++~RtpsDispatcher() : void
+..
+-operator=(const RtpsDispatcher &) = deleted : RtpsDispatcher &
+..
++AddListener<MessageT>(const RoleAttributes & self_attr, const MessageListener<MessageT> & listener) : void
++AddListener<MessageT>(const RoleAttributes & self_attr, const RoleAttributes & opposite_attr, const MessageListener<MessageT> & listener) : void
+-AddSubscriber(const RoleAttributes & self_attr) : void
+{static} +CleanUp() : void
+{static} +Instance(bool create_if_needed = true) : RtpsDispatcher *
+-OnMessage(uint64_t channel_id, const std::shared_ptr<std::string> & msg_str, const MessageInfo & msg_info) : void
++SetParticipant(const ParticipantPtr & participant) : void
++Shutdown() : void
+__
+-participant_ : ParticipantPtr
+-subs_ : std::unordered_map<uint64_t,std::shared_ptr<transport::Subscriber>>
+-subs_mutex_ : std::mutex
+}
+class "transport::QosProfileConf" as C_0004755328206793555529
+class C_0004755328206793555529 {
++QosProfileConf() : void
++~QosProfileConf() : void
+..
+{static} +CreateQosProfile(const QosHistoryPolicy & history, uint32_t depth, uint32_t mps, const QosReliabilityPolicy & reliability, const QosDurabilityPolicy & durability) : QosProfile
+__
+{static} +QOS_HISTORY_DEPTH_SYSTEM_DEFAULT : const uint32_t
+{static} +QOS_MPS_SYSTEM_DEFAULT : const uint32_t
+{static} +QOS_PROFILE_DEFAULT : const QosProfile
+{static} +QOS_PROFILE_PARAMETERS : const QosProfile
+{static} +QOS_PROFILE_PARAM_EVENT : const QosProfile
+{static} +QOS_PROFILE_SENSOR_DATA : const QosProfile
+{static} +QOS_PROFILE_SERVICES_DEFAULT : const QosProfile
+{static} +QOS_PROFILE_SYSTEM_DEFAULT : const QosProfile
+{static} +QOS_PROFILE_TF_STATIC : const QosProfile
+{static} +QOS_PROFILE_TOPO_CHANGE : const QosProfile
+}
+class "transport::MulticastNotifier" as C_0011880013178063404502
+class C_0011880013178063404502 {
+-MulticastNotifier() : void
+-MulticastNotifier(const MulticastNotifier &) = deleted : void
++~MulticastNotifier() : void
+..
+-operator=(const MulticastNotifier &) = deleted : MulticastNotifier &
+..
+{static} +CleanUp() : void
+-Init() : bool
+{static} +Instance(bool create_if_needed = true) : MulticastNotifier *
++Listen(int timeout_ms, ReadableInfo * info) : bool
++Notify(const ReadableInfo & info) : bool
++Shutdown() : void
+{static} +Type() : const char *
+__
+-is_shutdown_ : std::atomic<bool>
+-listen_addr_ : struct sockaddr_in
+-listen_fd_ : int
+-notify_addr_ : struct sockaddr_in
+-notify_fd_ : int
+}
+class "transport::ArenaAddressAllocatorMeta::(anonymous_1972291)" as C_0005330355733879811427
+class C_0005330355733879811427 {
+__
++address_segment_size_ : uint64_t
++allocated_index_ : uint64_t
++base_address_ : void *
++capacity_ : uint64_t
++occupied_ : std::atomic<bool>
++reclaim_stack_top_ : uint64_t
++ref_count_ : std::atomic<uint64_t>
++root_ : ArenaAddressNode *
++version_ : uint64_t
+}
+class "transport::ConditionNotifier" as C_0015406738841983138740
+class C_0015406738841983138740 {
+-ConditionNotifier() : void
+-ConditionNotifier(const ConditionNotifier &) = deleted : void
++~ConditionNotifier() : void
+..
+-operator=(const ConditionNotifier &) = deleted : ConditionNotifier &
+..
+{static} +CleanUp() : void
+-Init() : bool
+{static} +Instance(bool create_if_needed = true) : ConditionNotifier *
++Listen(int timeout_ms, ReadableInfo * info) : bool
++Notify(const ReadableInfo & info) : bool
+-OpenOnly() : bool
+-OpenOrCreate() : bool
+-Remove() : bool
+-Reset() : void
++Shutdown() : void
+{static} +Type() : const char *
+__
+-indicator_ : Indicator *
+-is_shutdown_ : std::atomic<bool>
+-key_ : key_t
+-managed_shm_ : void *
+-next_seq_ : uint64_t
+-shm_size_ : size_t
+}
+class "transport::ConditionNotifier::Indicator" as C_0003525196357497648861
+class C_0003525196357497648861 {
+__
++infos : ReadableInfo[4096]
++next_seq : std::atomic<uint64_t>
++seqs : uint64_t[4096]
+}
+class "transport::XsiSegment" as C_0009048689091071214721
+class C_0009048689091071214721 {
++XsiSegment(uint64_t channel_id) : void
++~XsiSegment() : void
+..
+-OpenOnly() : bool
+-OpenOrCreate() : bool
+-Remove() : bool
+-Reset() : void
+{static} +Type() : const char *
+__
+-key_ : key_t
+}
+class "transport::PosixSegment" as C_0003736223623320665428
+class C_0003736223623320665428 {
++PosixSegment(uint64_t channel_id) : void
++~PosixSegment() : void
+..
+-OpenOnly() : bool
+-OpenOrCreate() : bool
+-Remove() : bool
+-Reset() : void
+{static} +Type() : const char *
+__
+-shm_name_ : std::string
+}
+class "transport::ArenaAddressAllocatorMeta::(anonymous_4717887)" as C_0010895036941038130260
+class C_0010895036941038130260 {
+__
++address_segment_size_ : uint64_t
++allocated_index_ : uint64_t
++base_address_ : void *
++capacity_ : uint64_t
++occupied_ : std::atomic<bool>
++reclaim_stack_top_ : uint64_t
++ref_count_ : std::atomic<uint64_t>
++root_ : ArenaAddressNode *
++version_ : uint64_t
+}
+class "transport::ArenaSegmentState::(anonymous_4798025)" as C_0017677196874555925929
+class C_0017677196874555925929 {
+__
++auto_extended_ : std::atomic<bool>
++block_num_ : std::atomic<uint64_t>
++message_seq_ : std::atomic<uint64_t>
++message_size_ : std::atomic<uint64_t>
++mutex_ : std::mutex
++ref_count_ : std::atomic<uint64_t>
+}
+class "transport::ArenaSegmentBlockDescriptor::(anonymous_4798977)" as C_0012553584159856150659
+class C_0012553584159856150659 {
+__
++read_write_mutex_ : base::PthreadRWLock
++reading_ref_count_ : std::atomic<uint64_t>
++size_ : uint64_t
++writing_ref_count_ : std::atomic<uint64_t>
+}
+class "transport::ExtendedStruct::(anonymous_4866531)" as C_0011604253976076000184
+class C_0011604253976076000184 {
+__
++address_offset_ : uint64_t
++channel_id_ : uint64_t
++related_blocks_ : uint64_t[4]
++related_blocks_size_ : uint64_t
+}
+class "transport::ProtobufArenaManagerMeta::(anonymous_4866801)" as C_0003887887607196678624
+class C_0003887887607196678624 {
+__
++base_address_ : uint64_t
++block_num_ : uint64_t
++block_size_ : uint64_t
++extended_struct_num_ : uint64_t
++extended_struct_seq_ : uint64_t
++extended_struct_size_ : uint64_t
++message_num_ : uint64_t
++message_seq_ : uint64_t
++message_size_ : uint64_t
++segment_size_ : uint64_t
++version_ : uint64_t
+}
+class "transport::ArenaAddressAllocatorMeta::(anonymous_11600749)" as C_0014271060977705541010
+class C_0014271060977705541010 {
+__
++address_segment_size_ : uint64_t
++allocated_index_ : uint64_t
++base_address_ : void *
++capacity_ : uint64_t
++occupied_ : std::atomic<bool>
++reclaim_stack_top_ : uint64_t
++ref_count_ : std::atomic<uint64_t>
++root_ : ArenaAddressNode *
++version_ : uint64_t
+}
+class "transport::ArenaSegmentState::(anonymous_11680409)" as C_0004063892319470345618
+class C_0004063892319470345618 {
+__
++auto_extended_ : std::atomic<bool>
++block_num_ : std::atomic<uint64_t>
++message_seq_ : std::atomic<uint64_t>
++message_size_ : std::atomic<uint64_t>
++mutex_ : std::mutex
++ref_count_ : std::atomic<uint64_t>
+}
+class "transport::ArenaSegmentBlockDescriptor::(anonymous_11681361)" as C_0000507400773011478664
+class C_0000507400773011478664 {
+__
++read_write_mutex_ : base::PthreadRWLock
++reading_ref_count_ : std::atomic<uint64_t>
++size_ : uint64_t
++writing_ref_count_ : std::atomic<uint64_t>
+}
+class "transport::ExtendedStruct::(anonymous_11729879)" as C_0017594867354313749002
+class C_0017594867354313749002 {
+__
++address_offset_ : uint64_t
++channel_id_ : uint64_t
++related_blocks_ : uint64_t[4]
++related_blocks_size_ : uint64_t
+}
+class "transport::ProtobufArenaManagerMeta::(anonymous_11730149)" as C_0018395839932704296601
+class C_0018395839932704296601 {
+__
++base_address_ : uint64_t
++block_num_ : uint64_t
++block_size_ : uint64_t
++extended_struct_num_ : uint64_t
++extended_struct_seq_ : uint64_t
++extended_struct_size_ : uint64_t
++message_num_ : uint64_t
++message_seq_ : uint64_t
++message_size_ : uint64_t
++segment_size_ : uint64_t
++version_ : uint64_t
+}
+class "transport::HistoryAttributes" as C_0011946581364513685558
+class C_0011946581364513685558 {
++HistoryAttributes() : void
++HistoryAttributes(const proto::QosHistoryPolicy & qos_history_policy, uint32_t history_depth) : void
+__
++depth : uint32_t
++history_policy : proto::QosHistoryPolicy
+}
+class "transport::History<MessageT>" as C_0004136963819516788724
+class C_0004136963819516788724 {
++History(const HistoryAttributes & attr) : void
++~History() : void
+..
++Add(const MessagePtr & msg, const MessageInfo & msg_info) : void
++Clear() : void
++Disable() : void
++Enable() : void
++GetCachedMessage(std::vector<CachedMessage> * msgs) const : void
++GetSize() const : size_t
++depth() const : uint32_t
++max_depth() const : uint32_t
+__
+-depth_ : uint32_t
+-enabled_ : bool
+-max_depth_ : uint32_t
+-msgs_ : std::list<CachedMessage>
+-msgs_mutex_ : std::mutex
+}
+class "transport::History::CachedMessage" as C_0007279259743688172179
+class C_0007279259743688172179 {
++CachedMessage(const MessagePtr & message, const MessageInfo & message_info) : void
+__
++msg : MessagePtr
++msg_info : MessageInfo
+}
+abstract "transport::Receiver<M>" as C_0002772619049152076268
+abstract C_0002772619049152076268 {
++Receiver(const RoleAttributes & attr, const MessageListener & msg_listener) : void
++~Receiver() : void
+..
+{abstract} +Disable() = 0 : void
+{abstract} +Disable(const RoleAttributes & opposite_attr) = 0 : void
+{abstract} +Enable() = 0 : void
+{abstract} +Enable(const RoleAttributes & opposite_attr) = 0 : void
+#OnNewMessage(const MessagePtr & msg, const MessageInfo & msg_info) : void
+__
+#msg_listener_ : MessageListener
+}
+class "transport::IntraReceiver<M>" as C_0006210674083652181416
+class C_0006210674083652181416 {
++IntraReceiver(const RoleAttributes & attr, const typename Receiver<M>::MessageListener & msg_listener) : void
++~IntraReceiver() : void
+..
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
+__
+-dispatcher_ : IntraDispatcherPtr
+}
+class "transport::RtpsReceiver<M>" as C_0000604080021496804641
+class C_0000604080021496804641 {
++RtpsReceiver(const RoleAttributes & attr, const typename Receiver<M>::MessageListener & msg_listener) : void
++~RtpsReceiver() : void
+..
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
+__
+-dispatcher_ : RtpsDispatcherPtr
+}
+class "transport::ShmReceiver<M>" as C_0000343658206266332299
+class C_0000343658206266332299 {
++ShmReceiver(const RoleAttributes & attr, const typename Receiver<M>::MessageListener & msg_listener) : void
++~ShmReceiver() : void
+..
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
+__
+-dispatcher_ : ShmDispatcherPtr
+}
+class "transport::History<M>" as C_0006251376826719870128
+class C_0006251376826719870128 {
+__
+}
+class "transport::HybridReceiver<M>" as C_0009128885571484275324
+class C_0009128885571484275324 {
++HybridReceiver(const RoleAttributes & attr, const typename Receiver<M>::MessageListener & msg_listener, const ParticipantPtr & participant) : void
++~HybridReceiver() : void
+..
+-ClearReceivers() : void
+-ClearTransmitters() : void
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
+-GetRelation(const RoleAttributes & opposite_attr) : Relation
+-InitHistory() : void
+-InitMode() : void
+-InitReceivers() : void
+-InitTransmitters() : void
+-ObtainConfig() : void
+-ReceiveHistoryMsg(const RoleAttributes & opposite_attr) : void
+-ThreadFunc(const RoleAttributes & opposite_attr) : void
+__
+-history_ : HistoryPtr
+-mapping_table_ : MappingTable
+-mode_ : CommunicationModePtr
+-mutex_ : std::mutex
+-participant_ : ParticipantPtr
+-receivers_ : ReceiverContainer
+-transmitters_ : TransmitterContainer
+}
+abstract "transport::Transmitter<M>" as C_0010963660095714120032
+abstract C_0010963660095714120032 {
++Transmitter(const RoleAttributes & attr) : void
++~Transmitter() : void
+..
+{abstract} +AcquireMessage(std::shared_ptr<M> & msg) = 0 : bool
+{abstract} +Disable() = 0 : void
++Disable(const RoleAttributes & opposite_attr) : void
+{abstract} +Enable() = 0 : void
++Enable(const RoleAttributes & opposite_attr) : void
++NextSeqNum() : uint64_t
++Transmit(const MessagePtr & msg) : bool
+{abstract} +Transmit(const MessagePtr & msg, const MessageInfo & msg_info) = 0 : bool
++seq_num() const : uint64_t
+__
+#msg_info_ : MessageInfo
+#seq_num_ : std::shared_ptr< ::bvar::Adder<int>>
+}
+class "transport::IntraTransmitter<M>" as C_0013823367048256627589
+class C_0013823367048256627589 {
++IntraTransmitter(const RoleAttributes & attr) : void
++~IntraTransmitter() : void
+..
++AcquireMessage(std::shared_ptr<M> & msg) : bool
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
++Transmit(const MessagePtr & msg, const MessageInfo & msg_info) : bool
+__
+-channel_id_ : uint64_t
+-dispatcher_ : IntraDispatcherPtr
+}
+class "transport::RtpsTransmitter<M>" as C_0014016516421179263429
+class C_0014016516421179263429 {
++RtpsTransmitter(const RoleAttributes & attr, const ParticipantPtr & participant) : void
++~RtpsTransmitter() : void
+..
++AcquireMessage(std::shared_ptr<M> & msg) : bool
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
++Transmit(const MessagePtr & msg, const MessageInfo & msg_info) : bool
+-Transmit(const M & msg, const MessageInfo & msg_info) : bool
+__
+-participant_ : ParticipantPtr
+-publisher_ : PublisherPtr
+}
+class "transport::type_check<T,U>" as C_0007014450476188103792
+class C_0007014450476188103792 {
+__
+}
+class "transport::ShmTransmitter<M>" as C_0003197285973806733786
+class C_0003197285973806733786 {
++ShmTransmitter(const RoleAttributes & attr) : void
++~ShmTransmitter() : void
+..
++AcquireMessage(std::shared_ptr<M> & msg) : bool
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
++Transmit(const MessagePtr & msg, const MessageInfo & msg_info) : bool
+-Transmit(const M & msg, const MessageInfo & msg_info) : bool
+__
+-arena_receiver_count_ : std::atomic<int>
+-arena_transmit_ : bool
+-channel_id_ : uint64_t
+-host_id_ : uint64_t
+-notifier_ : NotifierPtr
+-segment_ : SegmentPtr
+-serialized_receiver_count_ : std::atomic<int>
+}
+class "transport::HybridTransmitter<M>" as C_0017507956020785600495
+class C_0017507956020785600495 {
++HybridTransmitter(const RoleAttributes & attr, const ParticipantPtr & participant) : void
++~HybridTransmitter() : void
+..
++AcquireMessage(std::shared_ptr<M> & msg) : bool
+-ClearReceivers() : void
+-ClearTransmitters() : void
++Disable() : void
++Disable(const RoleAttributes & opposite_attr) : void
++Enable() : void
++Enable(const RoleAttributes & opposite_attr) : void
+-GetRelation(const RoleAttributes & opposite_attr) : Relation
+-InitHistory() : void
+-InitMode() : void
+-InitReceivers() : void
+-InitTransmitters() : void
+-ObtainConfig() : void
+-ThreadFunc(const RoleAttributes & opposite_attr, const std::vector<typename History<M>::CachedMessage> & msgs) : void
++Transmit(const MessagePtr & msg, const MessageInfo & msg_info) : bool
+-TransmitHistoryMsg(const RoleAttributes & opposite_attr) : void
+__
+-history_ : HistoryPtr
+-mapping_table_ : MappingTable
+-mode_ : CommunicationModePtr
+-mutex_ : std::mutex
+-participant_ : ParticipantPtr
+-receivers_ : ReceiverMap
+-transmitters_ : TransmitterMap
+}
+class "transport::Transport" as C_0010791069656261967918
+class C_0010791069656261967918 {
+-Transport() : void
+-Transport(const Transport &) = deleted : void
++~Transport() : void
+..
+-operator=(const Transport &) = deleted : Transport &
+..
+{static} +CleanUp() : void
+-CreateParticipant() : void
++CreateReceiver<M>(const RoleAttributes & attr, const typename Receiver<M>::MessageListener & msg_listener, const OptionalMode & mode = OptionalMode::HYBRID) : typename std::shared_ptr<Receiver<M> >
++CreateTransmitter<M>(const RoleAttributes & attr, const OptionalMode & mode = OptionalMode::HYBRID) : typename std::shared_ptr<Transmitter<M> >
+{static} +Instance(bool create_if_needed = true) : Transport *
++Shutdown() : void
++participant() const : ParticipantPtr
+__
+-intra_dispatcher_ : IntraDispatcherPtr
+-is_shutdown_ : std::atomic<bool>
+-notifier_ : NotifierPtr
+-participant_ : ParticipantPtr
+-rtps_dispatcher_ : RtpsDispatcherPtr
+-shm_dispatcher_ : ShmDispatcherPtr
+}
+class "common::GlobalData" as C_0000812334927134081308
+class C_0000812334927134081308 {
+-GlobalData() : void
+-GlobalData(const GlobalData &) = deleted : void
++~GlobalData() : void
+..
+-operator=(const GlobalData &) = deleted : GlobalData &
+..
+{static} +CleanUp() : void
++ComponentNums() const : int
++Config() const : const CyberConfig &
++DisableSimulationMode() : void
++EnableSimulationMode() : void
+{static} +GenerateHashId(const std::string & name) : uint64_t
++GetChannelArenaConf(std::string channel_name) const : proto::ArenaChannelConf
++GetChannelArenaConf(uint64_t channel_id) const : proto::ArenaChannelConf
+{static} +GetChannelById(uint64_t id) : std::string
+{static} +GetNodeById(uint64_t id) : std::string
+{static} +GetServiceById(uint64_t id) : std::string
+{static} +GetTaskNameById(uint64_t id) : std::string
++HostIp() const : const std::string &
++HostName() const : const std::string &
+-InitConfig() : bool
+-InitHostInfo() : void
+{static} +Instance(bool create_if_needed = true) : GlobalData *
++IsChannelEnableArenaShm(uint64_t channel_id) const : bool
++IsChannelEnableArenaShm(std::string channel_name) const : bool
++IsMockTimeMode() const : bool
++IsRealityMode() const : bool
++ProcessGroup() const : const std::string &
++ProcessId() const : int
+{static} +RegisterChannel(const std::string & channel) : uint64_t
+{static} +RegisterNode(const std::string & node_name) : uint64_t
+{static} +RegisterService(const std::string & service) : uint64_t
+{static} +RegisterTaskName(const std::string & task_name) : uint64_t
++SchedName() const : const std::string &
++SetComponentNums(const int component_nums) : void
++SetProcessGroup(const std::string & process_group) : void
++SetSchedName(const std::string & sched_name) : void
+__
+{static} -channel_id_map_ : base::AtomicHashMap<uint64_t,std::string,256>
+-clock_mode_ : ClockMode
+-component_nums_ : int
+-config_ : CyberConfig
+-host_ip_ : std::string
+-host_name_ : std::string
+{static} -node_id_map_ : base::AtomicHashMap<uint64_t,std::string,512>
+-process_group_ : std::string
+-process_id_ : int
+-run_mode_ : RunMode
+-sched_name_ : std::string
+{static} -service_id_map_ : base::AtomicHashMap<uint64_t,std::string,256>
+{static} -task_id_map_ : base::AtomicHashMap<uint64_t,std::string,256>
+}
+enum "common::FileType" as C_0013181142683346867534
+enum C_0013181142683346867534 {
+TYPE_FILE
+TYPE_DIR
+}
+class "base::AtomicHashMap<K,V,std::size_t TableSize=128,typename std::enable_if<std::is_integral<K>::value && (TableSize & (TableSize - 1)) == 0, int>::type=0>" as C_0018029390341491350184
+class C_0018029390341491350184 {
++AtomicHashMap() : void
++AtomicHashMap(const AtomicHashMap<K,V,TableSize,> & other) = deleted : void
+..
++operator=(const AtomicHashMap<K,V,TableSize,> & other) = deleted : AtomicHashMap<K,V,TableSize,> &
+..
++Get(K key, V ** value) : bool
++Get(K key, V * value) : bool
++Has(K key) : bool
++Set(K key) : void
++Set(K key, const V & value) : void
++Set(K key, V && value) : void
+__
+-capacity_ : uint64_t
+-mode_num_ : uint64_t
+-table_ : Bucket[]
+}
+class "base::AtomicHashMap::Entry" as C_0008554886199204249318
+class C_0008554886199204249318 {
++Entry() : void
++Entry(K key) : void
++Entry(K key, const V & value) : void
++Entry(K key, V && value) : void
++~Entry() : void
+__
++key : K
++next : std::atomic<Entry *>
++value_ptr : std::atomic<V *>
+}
+class "base::AtomicHashMap::Bucket" as C_0007021716993374513679
+class C_0007021716993374513679 {
++Bucket() : void
++Find(K key, Entry ** prev_ptr, Entry ** target_ptr) : bool
++Get(K key, V ** value) : bool
++Has(K key) : bool
++Insert(K key, const V & value) : void
++Insert(K key, V && value) : void
++Insert(K key) : void
++~Bucket() : void
+__
++head_ : Entry *
+}
+class "base::ReadLockGuard<RWLock>" as C_0000879940457808295775
+class C_0000879940457808295775 {
++ReadLockGuard(RWLock & lock) : void
+-ReadLockGuard(const ReadLockGuard<RWLock> & other) = deleted : void
++~ReadLockGuard() : void
+..
+-operator=(const ReadLockGuard<RWLock> & other) = deleted : ReadLockGuard<RWLock> &
+__
+-rw_lock_ : RWLock &
+}
+class "base::WriteLockGuard<RWLock>" as C_0004430464137561506042
+class C_0004430464137561506042 {
++WriteLockGuard(RWLock & lock) : void
+-WriteLockGuard(const WriteLockGuard<RWLock> & other) = deleted : void
++~WriteLockGuard() : void
+..
+-operator=(const WriteLockGuard<RWLock> & other) = deleted : WriteLockGuard<RWLock> &
+__
+-rw_lock_ : RWLock &
+}
+class "base::AtomicRWLock" as C_0016255585257439877470
+class C_0016255585257439877470 {
++AtomicRWLock() : void
++AtomicRWLock(bool write_first) : void
+-AtomicRWLock(const AtomicRWLock &) = deleted : void
+..
+-operator=(const AtomicRWLock &) = deleted : AtomicRWLock &
+..
+-ReadLock() : void
+-ReadUnlock() : void
+-WriteLock() : void
+-WriteUnlock() : void
+__
+{static} +MAX_RETRY_TIMES : const uint32_t
+{static} +RW_LOCK_FREE : const int32_t
+{static} +WRITE_EXCLUSIVE : const int32_t
+-lock_num_ : std::atomic<int32_t>
+-write_first_ : bool
+-write_lock_wait_num_ : std::atomic<uint32_t>
+}
+class "base::Connection<Args...>" as C_0016661129342655959336
+class C_0016661129342655959336 {
++Connection() : void
++Connection(const SlotPtr & slot, const SignalPtr & signal) : void
++~Connection() : void
+..
++operator=(const Connection<Args...> & another) : Connection<Args...> &
+..
++Disconnect() : bool
++HasSlot(const SlotPtr & slot) const : bool
++IsConnected() const : bool
+__
+-signal_ : SignalPtr
+-slot_ : SlotPtr
+}
+class "base::Slot<Args...>" as C_0013822361360432921007
+class C_0013822361360432921007 {
++Slot(const Slot<Args...> & another) : void
++Slot(const Callback & cb, bool connected = true) : void
++~Slot() : void
+..
++operator()(Args... args) : void
+..
++Disconnect() : void
++connected() const : bool
+__
+-cb_ : Callback
+-connected_ : bool
+}
+class "base::Signal<Args...>" as C_0017034917299111069532
+class C_0017034917299111069532 {
++Signal() : void
+-Signal(const Signal<Args...> &) = deleted : void
++~Signal() : void
+..
+-operator=(const Signal<Args...> &) = deleted : Signal<Args...> &
+..
++operator()(Args... args) : void
+..
+-ClearDisconnectedSlots() : void
++Connect(const Callback & cb) : ConnectionType
++Disconnect(const ConnectionType & conn) : bool
++DisconnectAllSlots() : void
+__
+-mutex_ : std::mutex
+-slots_ : SlotList
+}
+class "base::Signal<std::shared_ptr<MessageT> const&,MessageInfo const&>" as C_0006452427002343941137
+class C_0006452427002343941137 {
+__
+}
+class "base::Connection<std::shared_ptr<MessageT> const&,MessageInfo const&>" as C_0017084799469332420328
+class C_0017084799469332420328 {
+__
+}
+class "base::AtomicHashMap<uint64_t,std::shared_ptr<transport::ListenerHandlerBase>>" as C_0004201862746119700442
+class C_0004201862746119700442 {
+__
+}
+abstract "base::WaitStrategy" as C_0018036510252007882548
+abstract C_0018036510252007882548 {
++~WaitStrategy() : void
+..
++BreakAllWait() : void
+{abstract} +EmptyWait() = 0 : bool
++NotifyOne() : void
+__
+}
+class "base::BlockWaitStrategy" as C_0000512674937856211197
+class C_0000512674937856211197 {
++BlockWaitStrategy() : void
+..
++BreakAllWait() : void
++EmptyWait() : bool
++NotifyOne() : void
+__
+-cv_ : std::condition_variable
+-mutex_ : std::mutex
+}
+class "base::SleepWaitStrategy" as C_0002003585229352012229
+class C_0002003585229352012229 {
++SleepWaitStrategy() : void
++SleepWaitStrategy(uint64_t sleep_time_us) : void
+..
++EmptyWait() : bool
++SetSleepTimeMicroSeconds(uint64_t sleep_time_us) : void
+__
+-sleep_time_us_ : uint64_t
+}
+class "base::YieldWaitStrategy" as C_0007454941853122367058
+class C_0007454941853122367058 {
++YieldWaitStrategy() : void
+..
++EmptyWait() : bool
+__
+}
+class "base::BusySpinWaitStrategy" as C_0003303597766509340902
+class C_0003303597766509340902 {
++BusySpinWaitStrategy() : void
+..
++EmptyWait() : bool
+__
+}
+class "base::TimeoutBlockWaitStrategy" as C_0008512249507034124384
+class C_0008512249507034124384 {
++TimeoutBlockWaitStrategy() : void
++TimeoutBlockWaitStrategy(uint64_t timeout) : void
+..
++BreakAllWait() : void
++EmptyWait() : bool
++NotifyOne() : void
++SetTimeout(uint64_t timeout) : void
+__
+-cv_ : std::condition_variable
+-mutex_ : std::mutex
+-time_out_ : std::chrono::milliseconds
+}
+class "base::ArenaQueue<T>" as C_0007149424644274191945
+class C_0007149424644274191945 {
++ArenaQueue() : void
++ArenaQueue(const ArenaQueue<T> & other) = deleted : void
++~ArenaQueue() : void
+..
++operator=(const ArenaQueue<T> & other) = deleted : ArenaQueue<T> &
+..
++AddBack() : T *
++Commit() : uint64_t
++Empty() : bool
++GetBack() : T *
++GetEleByIndex(uint64_t i, T *& ptr) : bool
++GetFront() : T *
++GetHeadIndex(uint64_t & index) : bool
+-GetIndex(uint64_t num) : uint64_t
++GetTailIndex(uint64_t & index) : bool
++Head() : uint64_t
++Init(uint64_t size) : bool
++Init(uint64_t size, google::protobuf::Arena * arena) : bool
++IsArenaEnable() : bool
++NextIndex(uint64_t & index) : bool
++PopFront() : T *
++Size() : uint64_t
++Tail() : uint64_t
+__
+-arena_ : bool
+-commit_ : std::atomic<uint64_t>
+-head_ : std::atomic<uint64_t>
+-normal_queue : std::deque<T>
+-pool_ : std::vector<T *>
+-pool_size_ : uint64_t
+-tail_ : std::atomic<uint64_t>
+}
+class "base::PthreadRWLock" as C_0008001289144562457071
+class C_0008001289144562457071 {
++PthreadRWLock(bool writer) : void
++PthreadRWLock() : void
+-PthreadRWLock(const PthreadRWLock & other) = deleted : void
++~PthreadRWLock() : void
+..
+-operator=(const PthreadRWLock & other) = deleted : PthreadRWLock &
+..
++ReadLock() : void
++ReadUnlock() : void
++WriteLock() : void
++WriteUnlock() : void
+__
+-rwlock_ : pthread_rwlock_t
+-rwlock_attr_ : pthread_rwlockattr_t
+}
+class "base::BoundedQueue<T>" as C_0010295952496519643170
+class C_0010295952496519643170 {
++BoundedQueue() : void
++BoundedQueue(const BoundedQueue<T> & other) = deleted : void
++~BoundedQueue() : void
+..
++operator=(const BoundedQueue<T> & other) = deleted : BoundedQueue<T> &
+..
++BreakAllWait() : void
++Commit() : uint64_t
++Dequeue(T * element) : bool
++Empty() : bool
++Enqueue(const T & element) : bool
++Enqueue(T && element) : bool
+-GetIndex(uint64_t num) : uint64_t
++Head() : uint64_t
++Init(uint64_t size) : bool
++Init(uint64_t size, WaitStrategy * strategy) : bool
++SetWaitStrategy(WaitStrategy * WaitStrategy) : void
++Size() : uint64_t
++Tail() : uint64_t
++WaitDequeue(T * element) : bool
++WaitEnqueue(const T & element) : bool
++WaitEnqueue(T && element) : bool
+__
+-break_all_wait_ : volatile bool
+-commit_ : std::atomic<uint64_t>
+-head_ : std::atomic<uint64_t>
+-pool_ : T *
+-pool_size_ : uint64_t
+-tail_ : std::atomic<uint64_t>
+-wait_strategy_ : std::unique_ptr<WaitStrategy>
+}
+class "base::BoundedQueue<std::shared_ptr<event::EventBase>>" as C_0013997357158403787069
+class C_0013997357158403787069 {
+__
+}
+class "base::AtomicHashMap<uint64_t,std::vector<std::shared_ptr<data::Notifier>>>" as C_0004988358814954872280
+class C_0004988358814954872280 {
+__
+}
+class "base::AtomicHashMap<uint64_t,std::vector<std::weak_ptr<data::CacheBuffer<std::shared_ptr<T>>>>>" as C_0016609408901890489963
+class C_0016609408901890489963 {
+__
+}
+class "base::AtomicHashMap<uint64_t,MutexWrapper *>" as C_0004071750672129933233
+class C_0004071750672129933233 {
+__
+}
+class "base::BoundedQueue<std::function<void()>>" as C_0003919773400012198692
+class C_0003919773400012198692 {
+__
+}
+abstract "message::ArenaManagerBase" as C_0015235881068134416352
+abstract C_0015235881068134416352 {
++ArenaManagerBase() : void
++~ArenaManagerBase() : void
+..
++CreateMessageWrapper() : std::shared_ptr<message::ArenaMessageWrapper>
++GetBaseAddress(const ArenaMessageWrapper * wrapper) : uint64_t
+{abstract} +GetMessage(ArenaMessageWrapper * wrapper) = 0 : void *
++GetMessage<MessageT>(ArenaMessageWrapper * wrapper) : MessageT *
+{abstract} +SetMessage(ArenaMessageWrapper * wrapper, const void * message) = 0 : void *
++SetMessage<MessageT>(ArenaMessageWrapper * wrapper, const MessageT & message) : MessageT *
+__
+}
+class "message::ArenaMessageWrapperMeta" as C_0016121319764428794316
+class C_0016121319764428794316 {
+__
++bytes_ : uint8_t[128]
++struct_ : ArenaMessageWrapperMeta::(struct_)
+}
+class "message::ArenaMessageWrapperMeta::(struct_)" as C_0003467071487848029725
+class C_0003467071487848029725 {
+__
++addr_offset_ : uint64_t
++version_ : uint64_t
+}
+class "message::ArenaMessageWrapperExtended" as C_0015902097494723492771
+class C_0015902097494723492771 {
+__
++bytes_ : uint8_t[256]
+}
+class "message::ArenaMessageWrapperDataStruct" as C_0012022321513929385842
+class C_0012022321513929385842 {
+__
++bytes_ : uint8_t[1024]
++struct_ : ArenaMessageWrapperDataStruct::(struct_)
+}
+class "message::ArenaMessageWrapperDataStruct::(struct_)" as C_0001260476691401591179
+class C_0001260476691401591179 {
+__
++extended_ : union ArenaMessageWrapperExtended
++meta_ : union ArenaMessageWrapperMeta
+}
+class "message::ArenaMessageWrapper" as C_0009251702756684773860
+class C_0009251702756684773860 {
++ArenaMessageWrapper() : void
++ArenaMessageWrapper(ArenaManagerBase * arena_manager) : void
++~ArenaMessageWrapper() : void
+..
++FillExtended(void * extended, uint64_t size) : bool
++FillMeta(void * meta, uint64_t size) : bool
++GetData() : void *
++GetExtended<T>() : T *
++GetMessage<MessageT>() : MessageT *
++GetMessageAddress() const : uint64_t
++GetMeta() : ArenaMessageWrapperMeta *
++GetVersion() const : uint64_t
++SetMessage<MessageT>(const MessageT & message) : MessageT *
++SetVersion(uint64_t version) : void
+__
+-arena_manager_ : ArenaManagerBase *
+-data_ : ArenaMessageWrapperDataStruct
+{static} +kDefaultVersion : const uint64_t
+-message_ : std::shared_ptr<void *>
+}
+class "message::MessageHeader" as C_0003342830769303639153
+class C_0003342830769303639153 {
++MessageHeader() : void
+..
+-Convert32ToArray(uint32_t input, char * output) : void
+-Convert64ToArray(uint64_t input, char * output) : void
+-ConvertArrayTo32(const char * input) const : uint32_t
+-ConvertArrayTo64(const char * input) const : uint64_t
++content_size() const : uint32_t
++dst_id() const : uint64_t
++is_magic_num_match(const char * other, size_t other_len) const : bool
++msg_type() const : const char *
++reset_content_size() : void
++reset_dst_id() : void
++reset_magic_num() : void
++reset_msg_type() : void
++reset_res() : void
++reset_seq() : void
++reset_src_id() : void
++reset_timestamp_ns() : void
++seq() const : uint64_t
++set_content_size(uint32_t content_size) : void
++set_dst_id(uint64_t dst_id) : void
++set_msg_type(const char * msg_type, size_t msg_type_len) : void
++set_seq(uint64_t seq) : void
++set_src_id(uint64_t src_id) : void
++set_timestamp_ns(uint64_t timestamp_ns) : void
++src_id() const : uint64_t
++timestamp_ns() const : uint64_t
+__
+-content_size_ : char[4]
+-dst_id_ : char[8]
+-magic_num_ : char[8]
+-msg_type_ : char[129]
+-res_ : char[19]
+-seq_ : char[8]
+-src_id_ : char[8]
+-timestamp_ns_ : char[8]
+}
+class "message::ErrorCollector" as C_0017106406570145208260
+class C_0017106406570145208260 {
+-AddError(const std::string & filename, const std::string & element_name, const google::protobuf::Message * descriptor, ErrorLocation location, const std::string & message) : void
+-AddWarning(const std::string & filename, const std::string & element_name, const google::protobuf::Message * descriptor, ErrorLocation location, const std::string & message) : void
+__
+}
+class "message::ProtobufFactory" as C_0014910953429472661299
+class C_0014910953429472661299 {
+-ProtobufFactory() : void
+-ProtobufFactory(const ProtobufFactory &) = deleted : void
++~ProtobufFactory() : void
+..
+-operator=(const ProtobufFactory &) = deleted : ProtobufFactory &
+..
+{static} +CleanUp() : void
++FindMessageTypeByFile(const FileDescriptorProto & file_desc_proto) : const Descriptor *
++FindMessageTypeByName(const std::string & type) const : const Descriptor *
++FindServiceByName(const std::string & name) const : const google::protobuf::ServiceDescriptor *
++GenerateMessageByType(const std::string & type) const : google::protobuf::Message *
+{static} +GetDescriptorString(const google::protobuf::Message & message, std::string * desc_str) : void
+{static} +GetDescriptorString(const Descriptor * desc, std::string * desc_str) : void
++GetDescriptorString(const std::string & type, std::string * desc_str) : void
+-GetMessageByGeneratedType(const std::string & type) const : google::protobuf::Message *
+{static} -GetProtoDesc(const FileDescriptor * file_desc, ProtoDesc * proto_desc) : bool
++GetProtoPath(const std::string & type, std::string & location) : void
++GetPythonDesc(const std::string & type, std::string * desc_str) : void
+{static} +Instance(bool create_if_needed = true) : ProtobufFactory *
++RegisterMessage(const std::string & proto_desc_str) : bool
++RegisterMessage(const FileDescriptorProto & file_desc_proto) : bool
++RegisterMessage(const Descriptor & desc) : bool
++RegisterMessage(const google::protobuf::Message & message) : bool
+-RegisterMessage(const ProtoDesc & proto_desc) : bool
++RegisterPythonMessage(const std::string & proto_str) : bool
+__
+-factory_ : std::unique_ptr<DynamicMessageFactory>
+-pool_ : std::unique_ptr<DescriptorPool>
+-register_mutex_ : std::mutex
+}
+class "message::PyMessageWrap" as C_0010076302236970955727
+class C_0010076302236970955727 {
++PyMessageWrap() : void
++PyMessageWrap(const std::string & msg, const std::string & type_name) : void
++PyMessageWrap(const PyMessageWrap & msg) : void
++~PyMessageWrap() : void
+..
++ByteSize() const : int
+{static} +GetDescriptorString(const std::string & type, std::string * desc_str) : void
++ParseFromArray(const void * data, int size) : bool
++ParseFromString(const std::string & msgstr) : bool
++SerializeToArray(void * data, int size) const : bool
++SerializeToString(std::string * output) const : bool
+{static} +TypeName() : std::string
++data() const : const std::string &
+{static} +descriptor() : const Descriptor *
++set_data(const std::string & msg) : void
++set_type_name(const std::string & type_name) : void
++type_name() : const std::string &
+__
+-data_ : std::string
+-type_name_ : std::string
+}
+class "message::PyMessageWrap::Descriptor" as C_0016048655321097508033
+class C_0016048655321097508033 {
++full_name() const : std::string
++name() const : std::string
+__
+}
+class "message::RawMessage" as C_0015044983379315806726
+class C_0015044983379315806726 {
++RawMessage() : void
++RawMessage(const std::string & data) : void
++RawMessage(const std::string & data, uint64_t ts) : void
++RawMessage(const RawMessage & raw_msg) : void
++~RawMessage() : void
+..
++operator=(const RawMessage & raw_msg) : RawMessage &
+..
++ByteSize() const : int
+{static} +GetDescriptorString(const std::string & type, std::string * desc_str) : void
++ParseFromArray(const void * data, int size) : bool
++ParseFromString(const std::string & str) : bool
++SerializeToArray(void * data, int size) const : bool
++SerializeToString(std::string * str) const : bool
+{static} +TypeName() : std::string
+{static} +descriptor() : const Descriptor *
+__
++message : std::string
++timestamp : uint64_t
+}
+class "message::RawMessage::Descriptor" as C_0009327100848721219177
+class C_0009327100848721219177 {
++full_name() const : std::string
++name() const : std::string
+__
+}
+class "message::HasByteSize<T>" as C_0013745583219837183137
+class C_0013745583219837183137 {
+{static} +Test<Class>(decltype(&Class::ByteSizeLong) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasType<T>" as C_0005225139508993229066
+class C_0005225139508993229066 {
+{static} +Test<Class>(decltype(&Class::TypeName) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasSetType<T>" as C_0001721013303067231037
+class C_0001721013303067231037 {
+{static} +Test<Class>(decltype(&Class::SetTypeName) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasGetDescriptorString<T>" as C_0006130277882986116983
+class C_0006130277882986116983 {
+{static} +Test<Class>(decltype(&Class::GetDescriptorString) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasDescriptor<T>" as C_0004458358173153599008
+class C_0004458358173153599008 {
+{static} +Test<Class>(decltype(&Class::descriptor) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasFullName<T>" as C_0007615384342926365977
+class C_0007615384342926365977 {
+{static} +Test<Class>(decltype(&Class::full_name) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasSerializeToString<T>" as C_0000272857028768376063
+class C_0000272857028768376063 {
+{static} +Test<Class>(decltype(&Class::SerializeToString) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasParseFromString<T>" as C_0004929644030016021901
+class C_0004929644030016021901 {
+{static} +Test<Class>(decltype(&Class::ParseFromString) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasSerializeToArray<T>" as C_0004462030168607836282
+class C_0004462030168607836282 {
+{static} +Test<Class>(decltype(&Class::SerializeToArray) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasParseFromArray<T>" as C_0015903336925215412484
+class C_0015903336925215412484 {
+{static} +Test<Class>(decltype(&Class::ParseFromArray) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasSerializeToArenaMessageWrapper<T>" as C_0009319525305173202000
+class C_0009319525305173202000 {
+{static} +Test<Class>(decltype(&Class::SerializeToArenaMessageWrapper) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasParseFromArenaMessageWrapper<T>" as C_0006601545059685008389
+class C_0006601545059685008389 {
+{static} +Test<Class>(decltype(&Class::ParseFromArenaMessageWrapper) *) constexpr : _Bool
+{static} +Test<typename>() constexpr : _Bool
+__
+{static} +value : const bool
+}
+class "message::HasSerializer<T>" as C_0015140836987060482035
+class C_0015140836987060482035 {
+__
+{static} +value : const bool
+}
+class "message::ArenaMessageWrapperMeta::(anonymous_4602351)" as C_0003265627626390737155
+class C_0003265627626390737155 {
+__
++addr_offset_ : uint64_t
++version_ : uint64_t
+}
+class "message::ArenaMessageWrapperDataStruct::(anonymous_4602629)" as C_0010652866764776803069
+class C_0010652866764776803069 {
+__
++extended_ : union ArenaMessageWrapperExtended
++meta_ : union ArenaMessageWrapperMeta
+}
+class "message::ArenaMessageWrapperMeta::(anonymous_4705211)" as C_0004465180611284132823
+class C_0004465180611284132823 {
+__
++addr_offset_ : uint64_t
++version_ : uint64_t
+}
+class "message::ArenaMessageWrapperDataStruct::(anonymous_4705489)" as C_0015039388504675276503
+class C_0015039388504675276503 {
+__
++extended_ : union ArenaMessageWrapperExtended
++meta_ : union ArenaMessageWrapperMeta
+}
+class "message::ArenaMessageWrapperMeta::(anonymous_2310575)" as C_0008849856298327746594
+class C_0008849856298327746594 {
+__
++addr_offset_ : uint64_t
++version_ : uint64_t
+}
+class "message::ArenaMessageWrapperDataStruct::(anonymous_2310865)" as C_0006248241445782583794
+class C_0006248241445782583794 {
+__
++extended_ : union ArenaMessageWrapperExtended
++meta_ : union ArenaMessageWrapperMeta
+}
+class "message::ArenaMessageWrapperMeta::(anonymous_4686681)" as C_0002976711792996990765
+class C_0002976711792996990765 {
+__
++addr_offset_ : uint64_t
++version_ : uint64_t
+}
+class "message::ArenaMessageWrapperDataStruct::(anonymous_4686959)" as C_0016567978497739618106
+class C_0016567978497739618106 {
+__
++extended_ : union ArenaMessageWrapperExtended
++meta_ : union ArenaMessageWrapperMeta
+}
+class "message::ArenaMessageWrapperMeta::(anonymous_4601953)" as C_0012029627964686929161
+class C_0012029627964686929161 {
+__
++addr_offset_ : uint64_t
++version_ : uint64_t
+}
+class "message::ArenaMessageWrapperDataStruct::(anonymous_4602231)" as C_0003315068747711824196
+class C_0003315068747711824196 {
+__
++extended_ : union ArenaMessageWrapperExtended
++meta_ : union ArenaMessageWrapperMeta
+}
+class "Duration" as C_0017532676823108101200
+class C_0017532676823108101200 {
++Duration() = default : void
++Duration(int64_t nanoseconds) : void
++Duration(int nanoseconds) : void
++Duration(double seconds) : void
++Duration(uint32_t seconds, uint32_t nanoseconds) : void
++Duration(const Duration & other) : void
++~Duration() = default : void
+..
++operator=(const Duration & other) : Duration &
+..
++operator!=(const Duration & rhs) const : bool
++operator*(double scale) const : Duration
++operator*=(double scale) : Duration &
++operator+(const Duration & rhs) const : Duration
++operator+=(const Duration & rhs) : Duration &
++operator-(const Duration & rhs) const : Duration
++operator-() const : Duration
++operator-=(const Duration & rhs) : Duration &
++operator<(const Duration & rhs) const : bool
++operator<=(const Duration & rhs) const : bool
++operator==(const Duration & rhs) const : bool
++operator>(const Duration & rhs) const : bool
++operator>=(const Duration & rhs) const : bool
+..
++IsZero() const : bool
++Sleep() const : void
++ToNanosecond() const : int64_t
++ToSecond() const : double
+__
+-nanoseconds_ : int64_t
+}
+class "Time" as C_0014594649503592088767
+class C_0014594649503592088767 {
++Time() = default : void
++Time(uint64_t nanoseconds) : void
++Time(int nanoseconds) : void
++Time(double seconds) : void
++Time(uint32_t seconds, uint32_t nanoseconds) : void
++Time(const Time & other) : void
+..
++operator=(const Time & other) : Time &
+..
++operator!=(const Time & rhs) const : bool
++operator+(const Duration & rhs) const : Time
++operator+=(const Duration & rhs) : Time &
++operator-(const Time & rhs) const : Duration
++operator-(const Duration & rhs) const : Time
++operator-=(const Duration & rhs) : Time &
++operator<(const Time & rhs) const : bool
++operator<=(const Time & rhs) const : bool
++operator==(const Time & rhs) const : bool
++operator>(const Time & rhs) const : bool
++operator>=(const Time & rhs) const : bool
+..
++IsZero() const : bool
+{static} +MonoTime() : Time
+{static} +Now() : Time
+{static} +SleepUntil(const Time & time) : void
++ToMicrosecond() const : uint64_t
++ToNanosecond() const : uint64_t
++ToSecond() const : double
++ToString() const : std::string
+__
+{static} +MAX : const Time
+{static} +MIN : const Time
+-nanoseconds_ : uint64_t
+}
+class "statistics::SpanHandler" as C_0012466456290397995974
+class C_0012466456290397995974 {
+__
++end_time : uint64_t
++min_ns : uint64_t
++name : std::string
++span_trace_node : std::shared_ptr< ::bvar::LatencyRecorder>
++start_time : uint64_t
+}
+class "statistics::Statistics" as C_0007422683053085491346
+class C_0007422683053085491346 {
+-Statistics() : void
+-Statistics(const Statistics &) = deleted : void
++~Statistics() : void
+..
+-operator=(const Statistics &) = deleted : Statistics &
+..
++AddRecvCount(const proto::RoleAttributes & role_attr, int total_msg_val) : bool
+{static} +CleanUp() : void
++CreateAdder<SampleT>(const proto::RoleAttributes & role_attr) : std::shared_ptr< ::bvar::Adder<SampleT> >
++CreateSpan(std::string name, uint64_t min_ns = 0) : bool
++DisableChanVar() : void
++EndSpan(std::string name) : bool
+-GetAdderVar(const proto::RoleAttributes & role_attr) : AdderVarPtr
+-GetChanCyberVar(const proto::RoleAttributes & role_attr) : LatencyVarPtr
+-GetChanProcVar(const proto::RoleAttributes & role_attr) : LatencyVarPtr
+-GetChanTranVar(const proto::RoleAttributes & role_attr) : LatencyVarPtr
+-GetCyberLatencyKey(const proto::RoleAttributes & role_attr) : const std::string
+-GetMicroTimeNow() const noexcept : uint64_t
+-GetProcLatencyKey(const proto::RoleAttributes & role_attr) : const std::string
++GetProcStatus(const proto::RoleAttributes & role_attr, uint64_t * val) : bool
+-GetProcStatusVar(const proto::RoleAttributes & role_attr) : StatusVarPtr
+-GetStartProcessStatusKey(const proto::RoleAttributes & role_attr) : const std::string
+-GetTotalMsgsStatusKey(const proto::RoleAttributes & role_attr) : const std::string
+-GetTotalMsgsStatusVar(const proto::RoleAttributes & role_attr) : StatusVarPtr
+-GetTotalRecvStatusKey(const proto::RoleAttributes & role_attr) : const std::string
+-GetTranLatencyKey(const proto::RoleAttributes & role_attr) : const std::string
+{static} +Instance(bool create_if_needed = true) : Statistics *
++RegisterChanVar(const proto::RoleAttributes & role_attr) : bool
++SamplingCyberLatency<SampleT>(const proto::RoleAttributes & role_attr, SampleT sample) : _Bool
++SamplingProcLatency<SampleT>(const proto::RoleAttributes & role_attr, SampleT sample) : _Bool
++SamplingTranLatency<SampleT>(const proto::RoleAttributes & role_attr, SampleT sample) : _Bool
++SetProcStatus(const proto::RoleAttributes & role_attr, uint64_t val) : bool
++SetTotalMsgsStatus(const proto::RoleAttributes & role_attr, int32_t val) : bool
++StartSpan(std::string name) : bool
+__
+-adder_map_ : std::unordered_map<std::string,AdderVarPtr>
+-disable_chan_var_ : bool
+-first_recv_ : bool
+-latency_map_ : std::unordered_map<std::string,LatencyVarPtr>
+-span_handlers_ : std::unordered_map<std::string,std::shared_ptr<SpanHandler>>
+-status_map_ : std::unordered_map<std::string,StatusVarPtr>
+}
+class "croutine::RoutineContext" as C_0016152607736698225610
+class C_0016152607736698225610 {
+__
++sp : char *
++stack : char[2097152]
+}
+enum "croutine::RoutineState" as C_0017478222482938407329
+enum C_0017478222482938407329 {
+READY
+FINISHED
+SLEEP
+IO_WAIT
+DATA_WAIT
+}
+class "croutine::CRoutine" as C_0001528228497646440008
+class C_0001528228497646440008 {
++CRoutine(const RoutineFunc & func) : void
+-CRoutine(CRoutine &) = deleted : void
++~CRoutine() : void
+..
+-operator=(CRoutine &) = deleted : CRoutine &
+..
++Acquire() : bool
++GetContext() : RoutineContext *
+{static} +GetCurrentRoutine() : CRoutine *
+{static} +GetMainStack() : char **
++GetStack() : char **
++HangUp() : void
++Release() : void
++Resume() : RoutineState
++Run() : void
+{static} +SetMainContext(const std::shared_ptr<RoutineContext> & context) : void
++SetUpdateFlag() : void
++Sleep(const Duration & sleep_duration) : void
++Stop() : void
++UpdateState() : RoutineState
++Wake() : void
+{static} +Yield(const RoutineState & state) : void
+{static} +Yield() : void
++group_name() : const std::string &
++id() const : uint64_t
++name() const : const std::string &
++priority() const : uint32_t
++processor_id() const : int
++set_group_name(const std::string & group_name) : void
++set_id(uint64_t id) : void
++set_name(const std::string & name) : void
++set_priority(uint32_t priority) : void
++set_processor_id(int processor_id) : void
++set_state(const RoutineState & state) : void
++state() const : RoutineState
++wake_time() const : std::chrono::steady_clock::time_point
+__
+-context_ : std::shared_ptr<RoutineContext>
+{static} -current_routine_ : CRoutine *
+-force_stop_ : bool
+-func_ : RoutineFunc
+-group_name_ : std::string
+-id_ : uint64_t
+-lock_ : std::atomic_flag
+{static} -main_stack_ : char *
+-name_ : std::string
+-priority_ : uint32_t
+-processor_id_ : int
+-state_ : RoutineState
+-updated_ : std::atomic_flag
+-wake_time_ : std::chrono::steady_clock::time_point
+}
+class "croutine::RoutineFactory" as C_0000333733699936000258
+class C_0000333733699936000258 {
++GetDataVisitor() const : std::shared_ptr<data::DataVisitorBase>
++SetDataVisitor(const std::shared_ptr<data::DataVisitorBase> & dv) : void
+__
++create_routine : CreateRoutineFunc
+-data_visitor_ : std::shared_ptr<data::DataVisitorBase>
+}
+class "NullType" as C_0006759518964531890887
+class C_0006759518964531890887 {
+__
+}
+enum "ReturnCode" as C_0003695569414382367609
+enum C_0003695569414382367609 {
+SUCC
+FAIL
+}
+enum "Relation" as C_0015353615404150946936
+enum C_0015353615404150946936 {
+NO_RELATION
+DIFF_HOST
+DIFF_PROC
+SAME_PROC
+}
+class "data::CacheBuffer<T>" as C_0005622443687775700737
+class C_0005622443687775700737 {
++CacheBuffer(uint64_t size) : void
++CacheBuffer(const CacheBuffer<T> & rhs) : void
+..
+-operator=(const CacheBuffer<T> & other) = deleted : CacheBuffer<T> &
+..
++operator[](const uint64_t & pos) : T &
+..
++Back() const : const T &
++Capacity() const : uint64_t
++Empty() const : bool
++Fill(const T & value) : void
++Front() const : const T &
++Full() const : bool
+-GetIndex(const uint64_t & pos) const : uint64_t
++Head() const : uint64_t
++Mutex() : std::mutex &
++SetFusionCallback(const FusionCallback & callback) : void
++Size() const : uint64_t
++Tail() const : uint64_t
++at(const uint64_t & pos) const : const T &
+__
+-buffer_ : std::vector<T>
+-capacity_ : uint64_t
+-fusion_callback_ : FusionCallback
+-head_ : uint64_t
+-mutex_ : std::mutex
+-tail_ : uint64_t
+}
+class "data::Notifier" as C_0001795680102939668927
+class C_0001795680102939668927 {
+__
++callback : std::function<void ()>
+}
+class "data::DataNotifier" as C_0011008939734155106024
+class C_0011008939734155106024 {
+-DataNotifier() : void
+-DataNotifier(const DataNotifier &) = deleted : void
++~DataNotifier() : void
+..
+-operator=(const DataNotifier &) = deleted : DataNotifier &
+..
++AddNotifier(uint64_t channel_id, const std::shared_ptr<Notifier> & notifier) : void
+{static} +CleanUp() : void
+{static} +Instance(bool create_if_needed = true) : DataNotifier *
++Notify(const uint64_t channel_id) : bool
+__
+-notifies_map_ : AtomicHashMap<uint64_t,NotifyVector>
+-notifies_map_mutex_ : std::mutex
+}
+class "data::CacheBuffer<std::shared_ptr<T>>" as C_0008494753553340758032
+class C_0008494753553340758032 {
+__
+}
+class "data::ChannelBuffer<T>" as C_0014539918260039611296
+class C_0014539918260039611296 {
++ChannelBuffer(uint64_t channel_id, BufferType * buffer) : void
+..
++Buffer() const : std::shared_ptr<BufferType>
++Fetch(uint64_t * index, std::shared_ptr<T> & m) : bool
++FetchMulti(uint64_t fetch_size, std::vector<std::shared_ptr<T>> * vec) : bool
++Latest(std::shared_ptr<T> & m) : bool
++channel_id() const : uint64_t
+__
+-buffer_ : std::shared_ptr<BufferType>
+-channel_id_ : uint64_t
+}
+class "data::DataDispatcher<T>" as C_0003369214311349426574
+class C_0003369214311349426574 {
+-DataDispatcher() : void
+-DataDispatcher(const DataDispatcher<T> &) = deleted : void
++~DataDispatcher() : void
+..
+-operator=(const DataDispatcher<T> &) = deleted : DataDispatcher<T> &
+..
++AddBuffer(const ChannelBuffer<T> & channel_buffer) : void
+{static} +CleanUp() : void
++Dispatch(const uint64_t channel_id, const std::shared_ptr<T> & msg) : bool
+{static} +Instance(bool create_if_needed = true) : DataDispatcher<T> *
+__
+-buffers_map_ : AtomicHashMap<uint64_t,BufferVector>
+-buffers_map_mutex_ : std::mutex
+-notifier_ : DataNotifier *
+}
+class "data::DataVisitorBase" as C_0013508754233300462006
+class C_0013508754233300462006 {
++DataVisitorBase() : void
+#DataVisitorBase(const DataVisitorBase &) = deleted : void
+..
+#operator=(const DataVisitorBase &) = deleted : DataVisitorBase &
+..
++RegisterNotifyCallback(std::function<void ()> && callback) : void
+__
+#data_notifier_ : DataNotifier *
+#next_msg_index_ : uint64_t
+#notifier_ : std::shared_ptr<Notifier>
+}
+abstract "data::fusion::DataFusion<M0,M1=NullType,M2=NullType,M3=NullType>" as C_0013239731740852275502
+abstract C_0013239731740852275502 {
++~DataFusion() : void
+..
+{abstract} +Fusion(uint64_t * index, std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1, std::shared_ptr<M2> & m2, std::shared_ptr<M3> & m3) = 0 : bool
+__
+}
+abstract "data::fusion::DataFusion<M0,M1,M2,NullType>" as C_0003739545453902420285
+abstract C_0003739545453902420285 {
++~DataFusion() : void
+..
+{abstract} +Fusion(uint64_t * index, std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1, std::shared_ptr<M2> & m2) = 0 : bool
+__
+}
+abstract "data::fusion::DataFusion<M0,M1,NullType,NullType>" as C_0001008646707037365352
+abstract C_0001008646707037365352 {
++~DataFusion() : void
+..
+{abstract} +Fusion(uint64_t * index, std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1) = 0 : bool
+__
+}
+class "data::fusion::DataFusion<M0,M1,M2,M3>" as C_0008226459233647421802
+class C_0008226459233647421802 {
+__
+}
+class "data::fusion::AllLatest<M0,M1=NullType,M2=NullType,M3=NullType>" as C_0011172852942809510311
+class C_0011172852942809510311 {
++AllLatest(const ChannelBuffer<M0> & buffer_0, const ChannelBuffer<M1> & buffer_1, const ChannelBuffer<M2> & buffer_2, const ChannelBuffer<M3> & buffer_3) : void
+..
++Fusion(uint64_t * index, std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1, std::shared_ptr<M2> & m2, std::shared_ptr<M3> & m3) : bool
+__
+-buffer_fusion_ : ChannelBuffer<FusionDataType>
+-buffer_m0_ : ChannelBuffer<M0>
+-buffer_m1_ : ChannelBuffer<M1>
+-buffer_m2_ : ChannelBuffer<M2>
+-buffer_m3_ : ChannelBuffer<M3>
+}
+class "data::fusion::DataFusion<M0,M1,M2>" as C_0005372466820212133595
+class C_0005372466820212133595 {
+__
+}
+class "data::fusion::AllLatest<M0,M1,M2,NullType>" as C_0001753316088389668859
+class C_0001753316088389668859 {
++AllLatest(const ChannelBuffer<M0> & buffer_0, const ChannelBuffer<M1> & buffer_1, const ChannelBuffer<M2> & buffer_2) : void
+..
++Fusion(uint64_t * index, std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1, std::shared_ptr<M2> & m2) : bool
+__
+-buffer_fusion_ : ChannelBuffer<FusionDataType>
+-buffer_m0_ : ChannelBuffer<M0>
+-buffer_m1_ : ChannelBuffer<M1>
+-buffer_m2_ : ChannelBuffer<M2>
+}
+class "data::fusion::DataFusion<M0,M1>" as C_0010155154109107346626
+class C_0010155154109107346626 {
+__
+}
+class "data::fusion::AllLatest<M0,M1,NullType,NullType>" as C_0003762908119468722808
+class C_0003762908119468722808 {
++AllLatest(const ChannelBuffer<M0> & buffer_0, const ChannelBuffer<M1> & buffer_1) : void
+..
++Fusion(uint64_t * index, std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1) : bool
+__
+-buffer_fusion_ : ChannelBuffer<FusionDataType>
+-buffer_m0_ : ChannelBuffer<M0>
+-buffer_m1_ : ChannelBuffer<M1>
+}
+class "data::ChannelBuffer<M0>" as C_0005894680221451713533
+class C_0005894680221451713533 {
+__
+}
+class "data::ChannelBuffer<M1>" as C_0005088546654777700113
+class C_0005088546654777700113 {
+__
+}
+class "data::ChannelBuffer<M2>" as C_0013956611816091958902
+class C_0013956611816091958902 {
+__
+}
+class "data::ChannelBuffer<M3>" as C_0014993223277494139600
+class C_0014993223277494139600 {
+__
+}
+class "data::ChannelBuffer<std::tuple<std::shared_ptr<M0>,std::shared_ptr<M1>,std::shared_ptr<M2>,std::shared_ptr<M3>>>" as C_0009028002247968413467
+class C_0009028002247968413467 {
+__
+}
+class "data::ChannelBuffer<std::tuple<std::shared_ptr<M0>,std::shared_ptr<M1>,std::shared_ptr<M2>>>" as C_0007139551600287312913
+class C_0007139551600287312913 {
+__
+}
+class "data::ChannelBuffer<std::tuple<std::shared_ptr<M0>,std::shared_ptr<M1>>>" as C_0000870842299829605251
+class C_0000870842299829605251 {
+__
+}
+class "data::VisitorConfig" as C_0008799281008736750173
+class C_0008799281008736750173 {
++VisitorConfig(uint64_t id, uint32_t size) : void
+__
++channel_id : uint64_t
++queue_size : uint32_t
+}
+class "data::DataVisitor<M0,M1=NullType,M2=NullType,M3=NullType>" as C_0000584874784153254704
+class C_0000584874784153254704 {
++DataVisitor(const std::vector<VisitorConfig> & configs) : void
++~DataVisitor() : void
+..
++TryFetch(std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1, std::shared_ptr<M2> & m2, std::shared_ptr<M3> & m3) : bool
+__
+-buffer_m0_ : ChannelBuffer<M0>
+-buffer_m1_ : ChannelBuffer<M1>
+-buffer_m2_ : ChannelBuffer<M2>
+-buffer_m3_ : ChannelBuffer<M3>
+-data_fusion_ : fusion::DataFusion<M0,M1,M2,M3> *
+}
+class "data::DataVisitor<M0,M1,M2,NullType>" as C_0002375959546818554623
+class C_0002375959546818554623 {
++DataVisitor(const std::vector<VisitorConfig> & configs) : void
++~DataVisitor() : void
+..
++TryFetch(std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1, std::shared_ptr<M2> & m2) : bool
+__
+-buffer_m0_ : ChannelBuffer<M0>
+-buffer_m1_ : ChannelBuffer<M1>
+-buffer_m2_ : ChannelBuffer<M2>
+-data_fusion_ : fusion::DataFusion<M0,M1,M2> *
+}
+class "data::DataVisitor<M0,M1,NullType,NullType>" as C_0002184240228551708311
+class C_0002184240228551708311 {
++DataVisitor(const std::vector<VisitorConfig> & configs) : void
++~DataVisitor() : void
+..
++TryFetch(std::shared_ptr<M0> & m0, std::shared_ptr<M1> & m1) : bool
+__
+-buffer_m0_ : ChannelBuffer<M0>
+-buffer_m1_ : ChannelBuffer<M1>
+-data_fusion_ : fusion::DataFusion<M0,M1> *
+}
+class "data::DataVisitor<M0,NullType,NullType,NullType>" as C_0008153842891487630165
+class C_0008153842891487630165 {
++DataVisitor(const VisitorConfig & configs) : void
++DataVisitor(uint64_t channel_id, uint32_t queue_size) : void
+..
++TryFetch(std::shared_ptr<M0> & m0) : bool
+__
+-buffer_ : ChannelBuffer<M0>
+}
+enum "event::EventType" as C_0009291157681045282804
+enum C_0009291157681045282804 {
+SCHED_EVENT
+TRANS_EVENT
+TRY_FETCH_EVENT
+}
+enum "event::TransPerf" as C_0007700896898655049487
+enum C_0007700896898655049487 {
+TRANSMIT_BEGIN
+SERIALIZE
+SEND
+MESSAGE_ARRIVE
+OBTAIN
+DESERIALIZE
+DISPATCH
+NOTIFY
+FETCH
+CALLBACK
+TRANS_END
+}
+enum "event::SchedPerf" as C_0004752146827124219915
+enum C_0004752146827124219915 {
+SWAP_IN
+SWAP_OUT
+NOTIFY_IN
+NEXT_RT
+RT_CREATE
+}
+abstract "event::EventBase" as C_0011487666253530106530
+abstract C_0011487666253530106530 {
+{abstract} +SerializeToString() = 0 : std::string
++set_adder(const std::string & adder) : void
++set_channel_id(uint64_t channel_id) : void
++set_cr_id(uint64_t cr_id) : void
++set_cr_state(int cr_state) : void
++set_eid(int eid) : void
++set_etype(int etype) : void
++set_fetch_res(int fetch_res) : void
++set_msg_seq(uint64_t msg_seq) : void
++set_proc_id(int proc_id) : void
++set_stamp(uint64_t stamp) : void
+__
+#eid_ : int
+#etype_ : int
+#stamp_ : uint64_t
+}
+class "event::SchedEvent" as C_0016082248126836836587
+class C_0016082248126836836587 {
++SchedEvent() : void
+..
++SerializeToString() : std::string
++set_cr_id(uint64_t cr_id) : void
++set_cr_state(int cr_state) : void
++set_proc_id(int proc_id) : void
+__
+-cr_id_ : uint64_t
+-cr_state_ : int
+-proc_id_ : int
+}
+class "event::TransportEvent" as C_0004771866068061115792
+class C_0004771866068061115792 {
++TransportEvent() : void
+..
++SerializeToString() : std::string
+{static} +ShowTransPerf(TransPerf type) : std::string
++set_adder(const std::string & adder) : void
++set_channel_id(uint64_t channel_id) : void
++set_msg_seq(uint64_t msg_seq) : void
+__
+-adder_ : std::string
+-channel_id_ : uint64_t
+-msg_seq_ : uint64_t
+}
+class "event::PerfEventCache" as C_0011901844262346528299
+class C_0011901844262346528299 {
+-PerfEventCache() : void
+-PerfEventCache(const PerfEventCache &) = deleted : void
++~PerfEventCache() : void
+..
+-operator=(const PerfEventCache &) = deleted : PerfEventCache &
+..
++AddSchedEvent(const SchedPerf event_id, const uint64_t cr_id, const int proc_id, const int cr_state = -1) : void
++AddTransportEvent(const TransPerf event_id, const uint64_t channel_id, const uint64_t msg_seq, const uint64_t stamp = 0, const std::string & adder = "-") : void
+{static} +CleanUp() : void
+{static} +Instance(bool create_if_needed = true) : PerfEventCache *
++PerfFile() : std::string
+-Run() : void
++Shutdown() : void
+-Start() : void
+__
+-enable_ : bool
+-event_queue_ : base::BoundedQueue<EventBasePtr>
+-io_thread_ : std::thread
+-kEventQueueSize : const uint64_t
+-kFlushSize : const int
+-of_ : std::ofstream
+-perf_conf_ : proto::PerfConf
+-perf_file_ : std::string
+-shutdown_ : bool
+}
+enum "State" as C_0006622918433820532572
+enum C_0006622918433820532572 {
+STATE_UNINITIALIZED
+STATE_INITIALIZED
+STATE_SHUTTING_DOWN
+STATE_SHUTDOWN
+}
+class "scheduler::MutexWrapper" as C_0002433613187873812202
+class C_0002433613187873812202 {
++operator=(const MutexWrapper & other) = deleted : MutexWrapper &
+..
++Mutex() : std::mutex &
+__
+-mutex_ : std::mutex
+}
+abstract "scheduler::Scheduler" as C_0002962525492382626426
+abstract C_0002962525492382626426 {
+#Scheduler() : void
++~Scheduler() : void
+..
++CheckSchedStatus() : void
++CreateTask(const RoutineFactory & factory, const std::string & name) : bool
++CreateTask(std::function<void ()> && func, const std::string & name, std::shared_ptr<DataVisitorBase> visitor = nullptr) : bool
+{abstract} +DispatchTask(const std::shared_ptr<CRoutine> &) = 0 : bool
+{static} +Instance() : Scheduler *
+{abstract} +NotifyProcessor(uint64_t crid) = 0 : bool
++NotifyTask(uint64_t crid) : bool
++ProcessLevelResourceControl() : void
+{abstract} +RemoveCRoutine(uint64_t crid) = 0 : bool
+{abstract} +RemoveTask(const std::string & name) = 0 : bool
++SetInnerThreadAttr(const std::string & name, std::thread * thr) : void
++SetInnerThreadConfs(const std::unordered_map<std::string,InnerThread> & confs) : void
++Shutdown() : void
++TaskPoolSize() : uint32_t
+__
+#cr_wl_mtx_ : std::mutex
+#id_cr_ : std::unordered_map<uint64_t,std::shared_ptr<CRoutine>>
+#id_cr_lock_ : AtomicRWLock
+#id_map_mutex_ : AtomicHashMap<uint64_t,MutexWrapper *>
+#inner_thr_confs_ : std::unordered_map<std::string,InnerThread>
+#pctxs_ : std::vector<std::shared_ptr<ProcessorContext>>
+#proc_num_ : uint32_t
+#process_level_cpuset_ : std::string
+#processors_ : std::vector<std::shared_ptr<Processor>>
+#stop_ : std::atomic<bool>
+#task_pool_size_ : uint32_t
+}
+class "scheduler::SchedulerChoreography" as C_0012408558397437907630
+class C_0012408558397437907630 {
+-SchedulerChoreography() : void
+..
+-CreateProcessor() : void
++DispatchTask(const std::shared_ptr<CRoutine> &) : bool
+-NotifyProcessor(uint64_t crid) : bool
++RemoveCRoutine(uint64_t crid) : bool
++RemoveTask(const std::string & name) : bool
+__
+-choreography_affinity_ : std::string
+-choreography_cpuset_ : std::vector<int>
+-choreography_processor_policy_ : std::string
+-choreography_processor_prio_ : int32_t
+-cr_confs_ : std::unordered_map<std::string,ChoreographyTask>
+-pool_affinity_ : std::string
+-pool_cpuset_ : std::vector<int>
+-pool_processor_policy_ : std::string
+-pool_processor_prio_ : int32_t
+}
+class "scheduler::SchedulerClassic" as C_0017185458300248094477
+class C_0017185458300248094477 {
+-SchedulerClassic() : void
+..
+-CreateProcessor() : void
++DispatchTask(const std::shared_ptr<CRoutine> &) : bool
+-NotifyProcessor(uint64_t crid) : bool
++RemoveCRoutine(uint64_t crid) : bool
++RemoveTask(const std::string & name) : bool
+__
+-classic_conf_ : ClassicConf
+-cr_confs_ : std::unordered_map<std::string,ClassicTask>
+}
+class "scheduler::ProcessorContext" as C_0007686979148404824700
+class C_0007686979148404824700 {
+__
+}
+class "scheduler::Processor" as C_0010511012020552286716
+class C_0010511012020552286716 {
+__
+}
+class "service_discovery::SubscriberListener" as C_0005754419081777901499
+class C_0005754419081777901499 {
++SubscriberListener(const transport::rtps::subsciber_callback & callback) : void
++~SubscriberListener() : void
+..
++on_data_available(eprosima::fastdds::dds::DataReader * reader) : void
++on_subscription_matched(eprosima::fastdds::dds::DataReader * reader, const eprosima::fastdds::dds::SubscriptionMatchedStatus & info) : void
+__
+-callback_ : transport::rtps::subsciber_callback
+-msg_info_ : transport::MessageInfo
+-mutex_ : std::mutex
+}
+class "service_discovery::RoleBase" as C_0001833351087386349788
+class C_0001833351087386349788 {
++RoleBase() : void
++RoleBase(const proto::RoleAttributes & attr, uint64_t timestamp_ns = 0) : void
++~RoleBase() = default : void
+..
++IsEarlierThan(const RoleBase & other) const : bool
++Match(const proto::RoleAttributes & target_attr) const : bool
++attributes() const : const proto::RoleAttributes &
++set_attributes(const proto::RoleAttributes & attr) : void
++set_timestamp_ns(uint64_t timestamp_ns) : void
++timestamp_ns() const : uint64_t
+__
+#attributes_ : proto::RoleAttributes
+#timestamp_ns_ : uint64_t
+}
+class "service_discovery::RoleWriter" as C_0015009384700979753680
+class C_0015009384700979753680 {
++RoleWriter() : void
++RoleWriter(const proto::RoleAttributes & attr, uint64_t timestamp_ns = 0) : void
++~RoleWriter() = default : void
+..
++Match(const proto::RoleAttributes & target_attr) const : bool
+__
+}
+class "service_discovery::RoleServer" as C_0015360781382361178547
+class C_0015360781382361178547 {
++RoleServer() : void
++RoleServer(const proto::RoleAttributes & attr, uint64_t timestamp_ns = 0) : void
++~RoleServer() = default : void
+..
++Match(const proto::RoleAttributes & target_attr) const : bool
+__
+}
+class "TaskManager" as C_0018215683561818650179
+class C_0018215683561818650179 {
+-TaskManager() : void
+-TaskManager(const TaskManager &) = deleted : void
++~TaskManager() : void
+..
+-operator=(const TaskManager &) = deleted : TaskManager &
+..
+{static} +CleanUp() : void
++Enqueue<F,Args...>(F && func, Args &&... args) : std::future<typename std::result_of<F (Args...)>::type>
+{static} +Instance(bool create_if_needed = true) : TaskManager *
++Shutdown() : void
+__
+-num_threads_ : uint32_t
+-stop_ : std::atomic<bool>
+-task_queue_ : std::shared_ptr<base::BoundedQueue<std::function<void ()>>>
+-task_queue_size_ : uint32_t
+-tasks_ : std::vector<uint64_t>
+}
+C_0008815281863053388442 o-- C_0004791320863494540557 : #id_
+C_0006842762886955524119 o-- C_0004791320863494540557 : -sender_id_
+C_0006842762886955524119 o-- C_0004791320863494540557 : -spare_id_
+C_0015201386975330476275 ..> C_0006842762886955524119
+C_0011344423027618631854 ..> C_0006842762886955524119
+C_0011344423027618631854 o-- C_0006452427002343941137 : -signal_
+C_0011344423027618631854 o-- C_0017084799469332420328 : -signal_conns_
+C_0011344423027618631854 o-- C_0006452427002343941137 : -signals_
+C_0011344423027618631854 o-- C_0017084799469332420328 : -signals_conns_
+C_0011344423027618631854 o-- C_0016255585257439877470 : -rw_lock_
+C_0015201386975330476275 <|-- C_0011344423027618631854
+C_0009142282634570950050 o-- C_0004201862746119700442 : #msg_listeners_
+C_0009142282634570950050 o-- C_0016255585257439877470 : #rw_lock_
+C_0008685721743863358775 ..> C_0006842762886955524119
+C_0008685721743863358775 o-- C_0015201386975330476275 : -handlers_
+C_0008685721743863358775 o-- C_0016255585257439877470 : -rw_lock_
+C_0008685721743863358775 o-- C_0015201386975330476275 : -oppo_handlers_
+C_0008685721743863358775 o-- C_0016255585257439877470 : -oppo_rw_lock_
+C_0017945448918823626443 ..> C_0006842762886955524119
+C_0017945448918823626443 o-- C_0008685721743863358775 : -chain_
+C_0009142282634570950050 <|-- C_0017945448918823626443
+C_0009622133662289176604 ..> C_0006497031752288891055
+C_0006266386219385012804 ..> C_0009622133662289176604
+C_0005041741934714673715 --> C_0005041741934714673715 : +parent_
+C_0005041741934714673715 --> C_0005041741934714673715 : +left_
+C_0005041741934714673715 --> C_0005041741934714673715 : +right_
+C_0012683544157905053205 o-- C_0012548613078892573017 : +struct_
+C_0012548613078892573017 --> C_0005041741934714673715 : +root_
+C_0011690857371869545599 --> C_0012683544157905053205 : -meta_
+C_0011690857371869545599 --> C_0005041741934714673715 : -nodes_
+C_0011690857371869545599 --> C_0005041741934714673715 : -root_
+C_0004002652622412309656 <.. C_0008022956656709429263 : +<<friend>>
+C_0007085174862166452329 --> C_0004002652622412309656 : +block
+C_0008022956656709429263 ..> C_0007085174862166452329
+C_0008022956656709429263 o-- C_0013315542204640020794 : #conf_
+C_0008022956656709429263 --> C_0003682446954266325154 : #state_
+C_0008022956656709429263 --> C_0004002652622412309656 : #blocks_
+C_0008022956656709429263 --> C_0004002652622412309656 : #arena_blocks_
+C_0014366587777039454946 o-- C_0009388175452461407785 : +struct_
+C_0009049567210916562923 o-- C_0012919604600318543884 : +struct_
+C_0012919604600318543884 o-- C_0008001289144562457071 : +read_write_mutex_
+C_0007184633418620411319 --> C_0010098703409307973343 : +block_
+C_0004975293191435240557 ..> C_0007184633418620411319
+C_0004975293191435240557 --> C_0014366587777039454946 : +state_
+C_0004975293191435240557 --> C_0010098703409307973343 : +blocks_
+C_0010570260476383246383 o-- C_0009839650499846034579 : +meta_
+C_0016942279582395589846 o-- C_0012566397486134208003 : +struct_
+C_0012314085183876676681 ..> C_0009251702756684773860
+C_0012314085183876676681 o-- C_0004975293191435240557 : -segments_
+C_0012314085183876676681 --> C_0011690857371869545599 : -address_allocator_
+C_0015235881068134416352 <|-- C_0012314085183876676681
+C_0000701954478867669936 ..> C_0008022956656709429263
+C_0011832155879086229817 ..> C_0007085174862166452329
+C_0011832155879086229817 ..> C_0006842762886955524119
+C_0011832155879086229817 o-- C_0008022956656709429263 : -segments_
+C_0011832155879086229817 o-- C_0004201862746119700442 : -arena_msg_listeners_
+C_0011832155879086229817 o-- C_0016255585257439877470 : -segments_lock_
+C_0011832155879086229817 --> C_0009622133662289176604 : -notifier_
+C_0009142282634570950050 <|-- C_0011832155879086229817
+C_0017119148899788107382 --> C_0006842762886955524119 : -callback_
+C_0017119148899788107382 o-- C_0006842762886955524119 : -msg_info_
+C_0015208152318340823594 ..> C_0008376145411402703009
+C_0015208152318340823594 ..> C_0006842762886955524119
+C_0017229405527246968024 --> C_0006842762886955524119 : -callback_
+C_0001453335640300835452 ..> C_0006842762886955524119
+C_0001453335640300835452 o-- C_0015208152318340823594 : -publisher_map_
+C_0001453335640300835452 o-- C_0017229405527246968024 : -subscriber_map_
+C_0009127750826083060664 ..> C_0006842762886955524119
+C_0009127750826083060664 o-- C_0017229405527246968024 : -subs_
+C_0009127750826083060664 o-- C_0001453335640300835452 : -participant_
+C_0009142282634570950050 <|-- C_0009127750826083060664
+C_0011880013178063404502 ..> C_0006497031752288891055
+C_0009622133662289176604 <|-- C_0011880013178063404502
+C_0005330355733879811427 --> C_0005041741934714673715 : +root_
+C_0015406738841983138740 ..> C_0006497031752288891055
+C_0015406738841983138740 --> C_0003525196357497648861 : -indicator_
+C_0009622133662289176604 <|-- C_0015406738841983138740
+C_0003525196357497648861 --+ C_0015406738841983138740
+C_0003525196357497648861 o-- "4096" C_0006497031752288891055 : +infos
+C_0008022956656709429263 <|-- C_0009048689091071214721
+C_0008022956656709429263 <|-- C_0003736223623320665428
+C_0010895036941038130260 --> C_0005041741934714673715 : +root_
+C_0012553584159856150659 o-- C_0008001289144562457071 : +read_write_mutex_
+C_0014271060977705541010 --> C_0005041741934714673715 : +root_
+C_0000507400773011478664 o-- C_0008001289144562457071 : +read_write_mutex_
+C_0004136963819516788724 ..> C_0011946581364513685558
+C_0004136963819516788724 ..> C_0006842762886955524119
+C_0004136963819516788724 ..> C_0007279259743688172179
+C_0007279259743688172179 --+ C_0004136963819516788724
+C_0007279259743688172179 o-- C_0006842762886955524119 : +msg_info
+C_0002772619049152076268 --> C_0006842762886955524119 : #msg_listener_
+C_0008815281863053388442 <|-- C_0002772619049152076268
+C_0006210674083652181416 --> C_0017945448918823626443 : -dispatcher_
+C_0002772619049152076268 <|-- C_0006210674083652181416
+C_0000604080021496804641 --> C_0009127750826083060664 : -dispatcher_
+C_0002772619049152076268 <|-- C_0000604080021496804641
+C_0000343658206266332299 --> C_0011832155879086229817 : -dispatcher_
+C_0002772619049152076268 <|-- C_0000343658206266332299
+C_0006251376826719870128 ..|> C_0004136963819516788724
+C_0009128885571484275324 o-- C_0006251376826719870128 : -history_
+C_0009128885571484275324 o-- C_0002772619049152076268 : -receivers_
+C_0009128885571484275324 o-- C_0015353615404150946936 : -mapping_table_
+C_0009128885571484275324 o-- C_0001453335640300835452 : -participant_
+C_0002772619049152076268 <|-- C_0009128885571484275324
+C_0010963660095714120032 o-- C_0006842762886955524119 : #msg_info_
+C_0008815281863053388442 <|-- C_0010963660095714120032
+C_0013823367048256627589 ..> C_0006842762886955524119
+C_0013823367048256627589 --> C_0017945448918823626443 : -dispatcher_
+C_0010963660095714120032 <|-- C_0013823367048256627589
+C_0014016516421179263429 ..> C_0006842762886955524119
+C_0014016516421179263429 o-- C_0001453335640300835452 : -participant_
+C_0014016516421179263429 o-- C_0015208152318340823594 : -publisher_
+C_0010963660095714120032 <|-- C_0014016516421179263429
+C_0003197285973806733786 ..> C_0006842762886955524119
+C_0003197285973806733786 o-- C_0008022956656709429263 : -segment_
+C_0003197285973806733786 --> C_0009622133662289176604 : -notifier_
+C_0010963660095714120032 <|-- C_0003197285973806733786
+C_0017507956020785600495 ..> C_0006842762886955524119
+C_0017507956020785600495 o-- C_0006251376826719870128 : -history_
+C_0017507956020785600495 o-- C_0010963660095714120032 : -transmitters_
+C_0017507956020785600495 o-- C_0015353615404150946936 : -mapping_table_
+C_0017507956020785600495 o-- C_0001453335640300835452 : -participant_
+C_0010963660095714120032 <|-- C_0017507956020785600495
+C_0010791069656261967918 o-- C_0001453335640300835452 : -participant_
+C_0010791069656261967918 --> C_0009622133662289176604 : -notifier_
+C_0010791069656261967918 --> C_0017945448918823626443 : -intra_dispatcher_
+C_0010791069656261967918 --> C_0011832155879086229817 : -shm_dispatcher_
+C_0010791069656261967918 --> C_0009127750826083060664 : -rtps_dispatcher_
+C_0000812334927134081308 --> C_0018029390341491350184 : -node_id_map_
+C_0000812334927134081308 --> C_0018029390341491350184 : -channel_id_map_
+C_0000812334927134081308 --> C_0018029390341491350184 : -service_id_map_
+C_0000812334927134081308 --> C_0018029390341491350184 : -task_id_map_
+C_0018029390341491350184 o-- C_0007021716993374513679 : -table_
+C_0008554886199204249318 --+ C_0018029390341491350184
+C_0008554886199204249318 --> C_0008554886199204249318 : +next
+C_0007021716993374513679 --+ C_0018029390341491350184
+C_0007021716993374513679 --> C_0008554886199204249318 : +head_
+C_0016661129342655959336 ..|> C_0016661129342655959336
+C_0016661129342655959336 o-- C_0013822361360432921007 : -slot_
+C_0016661129342655959336 --> C_0017034917299111069532 : -signal_
+C_0013822361360432921007 ..|> C_0013822361360432921007
+C_0017034917299111069532 ..> C_0016661129342655959336
+C_0017034917299111069532 o-- C_0013822361360432921007 : -slots_
+C_0006452427002343941137 ..|> C_0017034917299111069532
+C_0017084799469332420328 ..|> C_0016661129342655959336
+C_0004201862746119700442 ..|> C_0018029390341491350184
+C_0018036510252007882548 <|-- C_0000512674937856211197
+C_0018036510252007882548 <|-- C_0002003585229352012229
+C_0018036510252007882548 <|-- C_0007454941853122367058
+C_0018036510252007882548 <|-- C_0003303597766509340902
+C_0018036510252007882548 <|-- C_0008512249507034124384
+C_0010295952496519643170 o-- C_0018036510252007882548 : -wait_strategy_
+C_0013997357158403787069 ..|> C_0010295952496519643170
+C_0004988358814954872280 ..|> C_0018029390341491350184
+C_0016609408901890489963 ..> C_0008494753553340758032
+C_0016609408901890489963 ..|> C_0018029390341491350184
+C_0004071750672129933233 ..|> C_0018029390341491350184
+C_0003919773400012198692 ..|> C_0010295952496519643170
+C_0015235881068134416352 ..> C_0009251702756684773860
+C_0016121319764428794316 o-- C_0003467071487848029725 : +struct_
+C_0012022321513929385842 o-- C_0001260476691401591179 : +struct_
+C_0001260476691401591179 o-- C_0016121319764428794316 : +meta_
+C_0001260476691401591179 o-- C_0015902097494723492771 : +extended_
+C_0009251702756684773860 ..> C_0016121319764428794316
+C_0009251702756684773860 o-- C_0012022321513929385842 : -data_
+C_0009251702756684773860 --> C_0015235881068134416352 : -arena_manager_
+C_0010076302236970955727 ..> C_0016048655321097508033
+C_0016048655321097508033 --+ C_0010076302236970955727
+C_0015044983379315806726 ..> C_0009327100848721219177
+C_0009327100848721219177 --+ C_0015044983379315806726
+C_0010652866764776803069 o-- C_0016121319764428794316 : +meta_
+C_0010652866764776803069 o-- C_0015902097494723492771 : +extended_
+C_0015039388504675276503 o-- C_0016121319764428794316 : +meta_
+C_0015039388504675276503 o-- C_0015902097494723492771 : +extended_
+C_0006248241445782583794 o-- C_0016121319764428794316 : +meta_
+C_0006248241445782583794 o-- C_0015902097494723492771 : +extended_
+C_0016567978497739618106 o-- C_0016121319764428794316 : +meta_
+C_0016567978497739618106 o-- C_0015902097494723492771 : +extended_
+C_0003315068747711824196 o-- C_0016121319764428794316 : +meta_
+C_0003315068747711824196 o-- C_0015902097494723492771 : +extended_
+C_0014594649503592088767 ..> C_0017532676823108101200
+C_0014594649503592088767 --> C_0014594649503592088767 : +MAX
+C_0014594649503592088767 --> C_0014594649503592088767 : +MIN
+C_0007422683053085491346 o-- C_0012466456290397995974 : -span_handlers_
+C_0001528228497646440008 o-- C_0017478222482938407329 : -state_
+C_0001528228497646440008 --> C_0016152607736698225610 : -context_
+C_0001528228497646440008 --> C_0001528228497646440008 : -current_routine_
+C_0000333733699936000258 --> C_0013508754233300462006 : -data_visitor_
+C_0011008939734155106024 ..> C_0001795680102939668927
+C_0011008939734155106024 o-- C_0004988358814954872280 : -notifies_map_
+C_0008494753553340758032 ..|> C_0005622443687775700737
+C_0014539918260039611296 --> C_0008494753553340758032 : -buffer_
+C_0014539918260039611296 --> C_0005622443687775700737 : -buffer_
+C_0003369214311349426574 ..> C_0014539918260039611296
+C_0003369214311349426574 --> C_0011008939734155106024 : -notifier_
+C_0003369214311349426574 o-- C_0016609408901890489963 : -buffers_map_
+C_0013508754233300462006 --> C_0011008939734155106024 : #data_notifier_
+C_0013508754233300462006 --> C_0001795680102939668927 : #notifier_
+C_0003739545453902420285 ..> C_0006759518964531890887
+C_0003739545453902420285 ..|> C_0013239731740852275502
+C_0001008646707037365352 ..> C_0006759518964531890887
+C_0001008646707037365352 ..|> C_0003739545453902420285
+C_0008226459233647421802 ..|> C_0013239731740852275502
+C_0011172852942809510311 ..> C_0014539918260039611296
+C_0011172852942809510311 o-- C_0005894680221451713533 : -buffer_m0_
+C_0011172852942809510311 o-- C_0005088546654777700113 : -buffer_m1_
+C_0011172852942809510311 o-- C_0013956611816091958902 : -buffer_m2_
+C_0011172852942809510311 o-- C_0014993223277494139600 : -buffer_m3_
+C_0011172852942809510311 o-- C_0009028002247968413467 : -buffer_fusion_
+C_0008226459233647421802 <|-- C_0011172852942809510311
+C_0005372466820212133595 ..|> C_0013239731740852275502
+C_0001753316088389668859 ..> C_0006759518964531890887
+C_0001753316088389668859 ..|> C_0011172852942809510311
+C_0001753316088389668859 ..> C_0014539918260039611296
+C_0001753316088389668859 o-- C_0005894680221451713533 : -buffer_m0_
+C_0001753316088389668859 o-- C_0005088546654777700113 : -buffer_m1_
+C_0001753316088389668859 o-- C_0013956611816091958902 : -buffer_m2_
+C_0001753316088389668859 o-- C_0007139551600287312913 : -buffer_fusion_
+C_0005372466820212133595 <|-- C_0001753316088389668859
+C_0010155154109107346626 ..|> C_0013239731740852275502
+C_0003762908119468722808 ..> C_0006759518964531890887
+C_0003762908119468722808 ..|> C_0001753316088389668859
+C_0003762908119468722808 ..> C_0014539918260039611296
+C_0003762908119468722808 o-- C_0005894680221451713533 : -buffer_m0_
+C_0003762908119468722808 o-- C_0005088546654777700113 : -buffer_m1_
+C_0003762908119468722808 o-- C_0000870842299829605251 : -buffer_fusion_
+C_0010155154109107346626 <|-- C_0003762908119468722808
+C_0005894680221451713533 ..|> C_0014539918260039611296
+C_0005088546654777700113 ..|> C_0014539918260039611296
+C_0013956611816091958902 ..|> C_0014539918260039611296
+C_0014993223277494139600 ..|> C_0014539918260039611296
+C_0009028002247968413467 ..|> C_0014539918260039611296
+C_0007139551600287312913 ..|> C_0014539918260039611296
+C_0000870842299829605251 ..|> C_0014539918260039611296
+C_0000584874784153254704 ..> C_0008799281008736750173
+C_0000584874784153254704 --> C_0008226459233647421802 : -data_fusion_
+C_0000584874784153254704 --> C_0013239731740852275502 : -data_fusion_
+C_0000584874784153254704 o-- C_0005894680221451713533 : -buffer_m0_
+C_0000584874784153254704 o-- C_0005088546654777700113 : -buffer_m1_
+C_0000584874784153254704 o-- C_0013956611816091958902 : -buffer_m2_
+C_0000584874784153254704 o-- C_0014993223277494139600 : -buffer_m3_
+C_0013508754233300462006 <|-- C_0000584874784153254704
+C_0002375959546818554623 ..> C_0006759518964531890887
+C_0002375959546818554623 ..|> C_0000584874784153254704
+C_0002375959546818554623 ..> C_0008799281008736750173
+C_0002375959546818554623 --> C_0005372466820212133595 : -data_fusion_
+C_0002375959546818554623 --> C_0013239731740852275502 : -data_fusion_
+C_0002375959546818554623 o-- C_0005894680221451713533 : -buffer_m0_
+C_0002375959546818554623 o-- C_0005088546654777700113 : -buffer_m1_
+C_0002375959546818554623 o-- C_0013956611816091958902 : -buffer_m2_
+C_0013508754233300462006 <|-- C_0002375959546818554623
+C_0002184240228551708311 ..> C_0006759518964531890887
+C_0002184240228551708311 ..|> C_0002375959546818554623
+C_0002184240228551708311 ..> C_0008799281008736750173
+C_0002184240228551708311 --> C_0010155154109107346626 : -data_fusion_
+C_0002184240228551708311 --> C_0013239731740852275502 : -data_fusion_
+C_0002184240228551708311 o-- C_0005894680221451713533 : -buffer_m0_
+C_0002184240228551708311 o-- C_0005088546654777700113 : -buffer_m1_
+C_0013508754233300462006 <|-- C_0002184240228551708311
+C_0008153842891487630165 ..> C_0006759518964531890887
+C_0008153842891487630165 ..|> C_0002184240228551708311
+C_0008153842891487630165 ..> C_0008799281008736750173
+C_0008153842891487630165 o-- C_0005894680221451713533 : -buffer_
+C_0013508754233300462006 <|-- C_0008153842891487630165
+C_0011487666253530106530 <|-- C_0016082248126836836587
+C_0004771866068061115792 ..> C_0007700896898655049487
+C_0011487666253530106530 <|-- C_0004771866068061115792
+C_0011901844262346528299 ..> C_0004752146827124219915
+C_0011901844262346528299 ..> C_0007700896898655049487
+C_0011901844262346528299 o-- C_0013997357158403787069 : -event_queue_
+C_0002962525492382626426 ..> C_0000333733699936000258
+C_0002962525492382626426 ..> C_0013508754233300462006
+C_0002962525492382626426 o-- C_0016255585257439877470 : #id_cr_lock_
+C_0002962525492382626426 o-- C_0004071750672129933233 : #id_map_mutex_
+C_0002962525492382626426 o-- C_0001528228497646440008 : #id_cr_
+C_0002962525492382626426 o-- C_0007686979148404824700 : #pctxs_
+C_0002962525492382626426 o-- C_0010511012020552286716 : #processors_
+C_0012408558397437907630 ..> C_0001528228497646440008
+C_0002962525492382626426 <|-- C_0012408558397437907630
+C_0017185458300248094477 ..> C_0001528228497646440008
+C_0002962525492382626426 <|-- C_0017185458300248094477
+C_0005754419081777901499 --> C_0006842762886955524119 : -callback_
+C_0005754419081777901499 o-- C_0006842762886955524119 : -msg_info_
+C_0001833351087386349788 <|-- C_0015009384700979753680
+C_0001833351087386349788 <|-- C_0015360781382361178547
+C_0018215683561818650179 --> C_0003919773400012198692 : -task_queue_
+C_0018215683561818650179 --> C_0010295952496519643170 : -task_queue_
+
+'Generated with clang-uml, version 0.6.2
+'LLVM version Ubuntu clang version 18.1.3 (1ubuntu1)
+@enduml
