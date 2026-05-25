@@ -39,6 +39,7 @@ container_running() {
 build_image() {
   docker build \
     --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+    --build-arg USERNAME="${USER}" \
     --build-arg USER_UID="$(id -u)" \
     --build-arg USER_GID="$(id -g)" \
     -t "${IMAGE_NAME}" \
