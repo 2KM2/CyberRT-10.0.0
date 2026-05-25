@@ -1,0 +1,60 @@
+CyberRT transport recall note: Writer::Write to Reader callback
+
+Main chain
+
+Writer::Write
+-> transmitter_->Transmit(msg_ptr)
+-> HybridTransmitter chooses intra/shm/rtps
+-> concrete transport delivers message
+-> Dispatcher finds listeners by channel_id
+-> ListenerHandler runs registered receiver listener
+-> Receiver::OnNewMessage
+-> ReceiverManager-registered lambda
+-> DataDispatcher::Dispatch(channel_id, msg)
+-> ChannelBuffer / Blocker / DataVisitor path
+-> Reader enqueue / reader callback
+
+What to remember first
+
+1. Writer does not know transport details.
+   Writer only calls transmitter_->Transmit(...).
+
+2. Transport is split into three responsibilities.
+   - send path: transmitter
+   - receive routing: dispatcher + listener handler
+   - reader-side consumption: data dispatcher + blocker + reader
+
+3. Dispatcher routes by channel_id, not by node name.
+
+4. Receiver is not the final business callback.
+   Receiver first hands data into the data layer.
+
+5. User callback happens after data dispatch and reader-side buffering.
+
+Fast mental model
+
+- Writer says: send this message.
+- HybridTransmitter says: choose the best path.
+- Dispatcher says: which receivers belong to this channel.
+- DataDispatcher says: put this message into reader buffers.
+- Reader says: now consume it and notify user code.
+
+Shortest concrete path to remember
+
+For intra-process delivery:
+Writer::Write
+-> Transmitter::Transmit
+-> IntraTransmitter::Transmit
+-> IntraDispatcher::OnMessage
+-> ListenerHandler::Run
+-> Receiver::OnNewMessage
+-> DataDispatcher::Dispatch
+-> Reader side buffer/callback
+
+Review prompts
+
+1. Why can intra avoid serialization while RTPS cannot?
+2. Why is Dispatcher keyed by channel_id?
+3. Why does transport stop at Receiver/DataDispatcher instead of directly calling user callback?
+4. What problem do Blocker and buffering solve for Reader?
+5. Which parts change across intra/shm/rtps, and which parts stay the same?

@@ -1,0 +1,12 @@
+CyberRT transport review questions
+
+1. Writer 是什么时候创建 transmitter 的？
+2. HybridTransmitter 如何决定走 intra/shm/rtps？
+3. Dispatcher 维护的 key 是什么，为什么是 channel_id？
+4. 为什么 RTPS 路径需要 ParseFromString/SerializeToString，而 intra 不需要？
+5. SHM 为什么还需要 Dispatcher，它不是已经有共享内存了吗？
+
+建议复盘方式：
+- 先从 Writer/Reader 视角回答问题。
+- 再回到 transport/dispatcher/shm/rtps 目录验证自己的答案。
+- 最后尝试画出一条从 Writer::Write 到 Reader callback 的链路图。
