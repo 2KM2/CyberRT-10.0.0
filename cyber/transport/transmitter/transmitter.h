@@ -61,7 +61,7 @@ class Transmitter : public Endpoint {
 
  protected:
   MessageInfo msg_info_;
-  std::shared_ptr<::bvar::Adder<int>> seq_num_;
+  std::shared_ptr<::bvar::Adder<int>> seq_num_;  // std::atomic<uint64_t>。
 };
 
 template <typename M>

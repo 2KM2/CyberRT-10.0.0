@@ -67,7 +67,8 @@ class MessageInfo {
   Identity sender_id_;
   uint64_t channel_id_ = 0;
   uint64_t seq_num_ = 0;
-  Identity spare_id_;
+  Identity spare_id_;  // 在 service client 场景中，spare_id 实际上被用来
+                       // 标识响应应该回给哪个 client
   uint64_t send_time_;
 };
 
