@@ -1,0 +1,65 @@
+PROJECT_NAME           = "CyberRT-10.0.0"
+
+OUTPUT_DIRECTORY       = docs
+
+EXTRACT_ALL            = YES
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = YES
+
+INPUT                  = cyber 
+
+FILE_PATTERNS          = *.h \
+                         *.hpp \
+                         *.hh \
+                         *.hxx \
+                         *.c \
+                         *.cc \
+                         *.cpp \
+                         *.cxx \
+                         *.inl \
+                         *.ipp
+
+RECURSIVE              = YES
+
+EXCLUDE                = build \
+                         cmake-build-debug \
+                         cmake-build-release \
+                         .git \
+                         third_party \
+                         external \
+                         install \
+                         docs
+
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = YES
+REFERENCED_BY_RELATION = YES
+REFERENCES_RELATION    = YES
+
+GENERATE_TREEVIEW      = YES
+
+GENERATE_LATEX         = NO
+
+HAVE_DOT               = YES
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+UML_LOOK               = YES
+DOT_UML_DETAILS        = YES
+UML_LIMIT_NUM_FIELDS   = 20
+
+INCLUDE_GRAPH          = YES
+INCLUDED_BY_GRAPH      = YES
+GRAPHICAL_HIERARCHY    = YES
+DIRECTORY_GRAPH        = YES
+
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+
+DOT_GRAPH_MAX_NODES    = 100
+MAX_DOT_GRAPH_DEPTH    = 0
+
+BUILTIN_STL_SUPPORT    = YES
