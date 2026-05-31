@@ -1,0 +1,33 @@
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+autonumber
+participant "DAG Config" as DAG
+participant "Component<M>" as Comp
+participant "Node" as Node
+participant "Reader<T>" as Reader
+participant "Transport Receiver" as Receiver
+participant "DataVisitor" as Visitor
+participant "RoutineFactory" as Factory
+participant "Scheduler" as Scheduler
+participant "Processor" as Processor
+
+DAG -> Comp : Initialize(config)
+Comp -> Node : new Node(config.name())
+Comp -> Comp : LoadConfigFiles(config)
+Comp -> Comp : Init()
+Comp -> Node : CreateReader<T>(reader_cfg)
+Node -> Reader : 创建 Reader<T>
+Reader -> Receiver : 内部绑定 Receiver<T>
+Comp -> Comp : readers_.emplace_back(reader)
+Comp -> Visitor : 创建 DataVisitor\n(conf = ChannelId + QueueSize)
+Comp -> Factory : CreateRoutineFactory(func, dv)
+Comp -> Scheduler : CreateTask(factory, node_->Name())
+Scheduler -> Processor : 注册可执行 task
+note right of Processor
+此时还没真正执行业务 Proc(msg)
+只是完成“可被调度”的装配
+end note
+@enduml

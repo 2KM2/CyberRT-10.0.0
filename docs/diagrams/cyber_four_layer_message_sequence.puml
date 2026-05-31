@@ -1,0 +1,30 @@
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+autonumber
+participant "上游 Component" as UpComp
+participant "Node" as UpNode
+participant "Writer<T>" as Writer
+participant "Transmitter<T> / Transport" as TransportTx
+participant "Receiver<T> / Transport" as TransportRx
+participant "Reader<T>" as Reader
+participant "DataVisitor" as Visitor
+participant "Scheduler" as Scheduler
+participant "Processor / CRoutine" as Processor
+participant "下游 Component" as DownComp
+
+UpComp -> UpNode : node_->CreateWriter<T>()\n(初始化阶段已完成)
+UpComp -> Writer : writer_->Write(msg)
+Writer -> TransportTx : Transmit(msg)
+TransportTx -> TransportRx : 通过 INTRA / SHM / RTPS 传输
+TransportRx -> Reader : 交付消息
+Reader -> Visitor : 消息进入可访问缓冲
+Visitor -> Scheduler : 通知任务可执行
+Scheduler -> Processor : 唤醒对应 task / routine
+Processor -> DownComp : Process(msg)
+DownComp -> DownComp : Proc(msg)
+DownComp -> UpNode : 可继续 CreateWriter<U>()\n(若需要输出)
+DownComp -> Writer : writer_->Write(out_msg)\n(若需要输出)
+@enduml

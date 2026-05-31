@@ -336,6 +336,44 @@ reader 和 scheduler 之间的数据访问桥梁。它让 reader 收到的消息
 
 ## 6. 四层之间如何建立关系：从初始化角度看
 
+先给出一张“初始化阶段接线”的 PlantUML 时序图，把 `CreateReader`、`DataVisitor`、`CreateTask` 三者怎么串起来画清楚。
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+autonumber
+participant "DAG Config" as DAG
+participant "Component<M>" as Comp
+participant "Node" as Node
+participant "Reader<T>" as Reader
+participant "Transport Receiver" as Receiver
+participant "DataVisitor" as Visitor
+participant "RoutineFactory" as Factory
+participant "Scheduler" as Scheduler
+participant "Processor" as Processor
+
+DAG -> Comp : Initialize(config)
+Comp -> Node : new Node(config.name())
+Comp -> Comp : LoadConfigFiles(config)
+Comp -> Comp : Init()
+Comp -> Node : CreateReader<T>(reader_cfg)
+Node -> Reader : 创建 Reader<T>
+Reader -> Receiver : 内部绑定 Receiver<T>
+Comp -> Comp : readers_.emplace_back(reader)
+Comp -> Visitor : 创建 DataVisitor\n(conf = ChannelId + QueueSize)
+Comp -> Factory : CreateRoutineFactory(func, dv)
+Comp -> Scheduler : CreateTask(factory, node_->Name())
+Scheduler -> Processor : 注册可执行 task
+note right of Processor
+此时还没真正执行业务 Proc(msg)
+只是完成“可被调度”的装配
+end note
+@enduml
+```
+
 如果从 component 的初始化阶段看，这四层关系建立顺序可以写成：
 
 ```text
@@ -362,6 +400,41 @@ Component
 ---
 
 ## 7. 四层之间如何建立关系：从消息流角度看
+
+先给出一张“同一条消息跨四层流动”的 PlantUML 时序图，再回头看文字链路会更清楚。
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+autonumber
+participant "上游 Component" as UpComp
+participant "Node" as UpNode
+participant "Writer<T>" as Writer
+participant "Transmitter<T> / Transport" as TransportTx
+participant "Receiver<T> / Transport" as TransportRx
+participant "Reader<T>" as Reader
+participant "DataVisitor" as Visitor
+participant "Scheduler" as Scheduler
+participant "Processor / CRoutine" as Processor
+participant "下游 Component" as DownComp
+
+UpComp -> UpNode : node_->CreateWriter<T>()\n(初始化阶段已完成)
+UpComp -> Writer : writer_->Write(msg)
+Writer -> TransportTx : Transmit(msg)
+TransportTx -> TransportRx : 通过 INTRA / SHM / RTPS 传输
+TransportRx -> Reader : 交付消息
+Reader -> Visitor : 消息进入可访问缓冲
+Visitor -> Scheduler : 通知任务可执行
+Scheduler -> Processor : 唤醒对应 task / routine
+Processor -> DownComp : Process(msg)
+DownComp -> DownComp : Proc(msg)
+DownComp -> UpNode : 可继续 CreateWriter<U>()\n(若需要输出)
+DownComp -> Writer : writer_->Write(out_msg)\n(若需要输出)
+@enduml
+```
 
 如果从一条消息的生命周期看，可以写成：
 
