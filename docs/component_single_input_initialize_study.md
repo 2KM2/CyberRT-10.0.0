@@ -970,6 +970,57 @@ end note
 
 ### 用 lidar 这条链来对照
 
+下面这张图把“同一个 process 内包含多个 component”这件事具体画出来。
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+rectangle "OS Process\nprocess_name = lidar_driver" as Process {
+  rectangle "Mainboard / Runtime" as Runtime {
+    rectangle "DAG: velodyne_lidar.dag" as DAG {
+      rectangle "LidarDriverComponent\n职责: 收硬件 UDP 包\n组装 VelodyneScan\n发布 Scan channel" as DriverComp
+      rectangle "VelodyneConvertComponent\n职责: 订阅 Scan\n转成 PointCloud\n发布 PointCloud2 channel" as ConvertComp
+      rectangle "CompensatorComponent\n职责: 订阅 PointCloud2\n做补偿\n继续发布" as CompComp
+    }
+  }
+}
+
+cloud "Velodyne Hardware" as HW
+queue "Scan Channel\n/apollo/sensor/lidar16/.../Scan" as ScanChan
+queue "PointCloud2 Channel\n/apollo/sensor/lidar16/.../PointCloud2" as CloudChan
+queue "Compensated Output\n下游感知继续消费" as OutChan
+
+HW --> DriverComp : UDP raw packets
+DriverComp --> ScanChan : writer_->Write(scan)
+ScanChan --> ConvertComp : Reader<VelodyneScan>
+ConvertComp --> CloudChan : writer_->Write(point_cloud)
+CloudChan --> CompComp : Reader<PointCloud>
+CompComp --> OutChan : writer_->Write(compensated_cloud)
+
+note right of Process
+同一个 process 内
+可以加载多个 component
+component 分开
+不等于 process 分开
+end note
+
+note bottom of DriverComp
+这是采集阶段
+end note
+
+note bottom of ConvertComp
+这是转换阶段
+end note
+
+note bottom of CompComp
+这是后处理阶段
+end note
+@enduml
+```
+
 在 `velodyne_lidar` 这个例子里：
 
 - `component`：`LidarDriverComponent`、`VelodyneConvertComponent`、`CompensatorComponent`
