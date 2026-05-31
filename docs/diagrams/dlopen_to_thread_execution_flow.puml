@@ -1,0 +1,41 @@
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+start
+:mainboard 启动 process;
+:读取 launch / dag 配置;
+:dlopen(module_library);
+:ClassLoader 根据 class_name\n创建 component 对象;
+:调用 component->Initialize(config);
+
+if (普通 Component<M> ?) then (yes)
+  :创建 node_;
+  :LoadConfigFiles(config);
+  :调用业务 Init();
+  :创建 Reader;
+  :创建 DataVisitor;
+  :创建 RoutineFactory;
+  :scheduler->CreateTask(...);
+  :channel 来消息;
+  :scheduler worker thread 执行 Process(msg);
+  :调用 Proc(msg);
+elseif (TimerComponent ?) then (yes)
+  :创建 node_;
+  :LoadConfigFiles(config);
+  :调用业务 Init();
+  :创建 Timer;
+  :timer_->Start();
+  :timer 到期;
+  :timer 驱动线程执行 Process();
+  :调用 Proc();
+else (业务自建线程)
+  :创建 node_ / 调业务 Init();
+  :业务代码 std::thread(...) 拉起线程;
+  :业务线程收硬件数据 / 跑循环逻辑;
+  :业务线程内部发布消息或处理数据;
+endif
+
+stop
+@enduml
