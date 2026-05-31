@@ -674,7 +674,92 @@ return sched->CreateTask(factory, node_->Name());
 
 ---
 
-## 18. 把整段 `Initialize()` 重组成人话
+## 18. 完整流程图
+
+下面这张图把单输入 component 从 DAG 装配到 `Proc(msg)` 的完整链路串起来，也把 `VelodyneConvertComponent` 放进去作为具体例子。
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+start
+:读取 DAG 配置;
+:ClassLoader 动态加载组件类;
+:创建组件对象\n如 VelodyneConvertComponent;
+:调用 Component<M0>::Initialize(config);
+:创建 node_\nnode_.reset(new Node(config.name()));
+:LoadConfigFiles(config)\n加载 config_file_path / flag_file_path;
+:调用业务 Init();
+:业务组件准备资源\n读配置 / 建 writer / 建对象池;
+:从 config.readers(0) 组装 ReaderConfig;
+:构造框架回调 func;
+if (reality mode?) then (yes)
+  :CreateReader<M0>(reader_cfg)\n创建裸 reader;
+  :创建 DataVisitor;
+  :CreateRoutineFactory<M0>(func, dv);
+  :scheduler->CreateTask(factory, node_->Name());
+else (no)
+  :CreateReader<M0>(reader_cfg, func)\n直接绑定回调;
+endif
+:reader 放入 readers_;
+:channel 来消息;
+:Reader 收到消息\n如 /apollo/sensor/lidar16/Scan;
+:框架回调 func 被触发;
+:调用 Process(msg);
+:调用业务 Proc(msg);
+:VelodyneConvertComponent::Proc(scan_msg);
+:ConvertPacketsToPointcloud(scan_msg, point_cloud);
+:VelodyneParser::GeneratePointcloud(...);
+:writer_->Write(point_cloud);
+:发布到输出 channel\n如 /apollo/sensor/lidar16/PointCloud2;
+stop
+@enduml
+```
+
+### 这张图里最关键的两条线
+
+#### 1. 接收数据方
+
+接收链路是：
+
+```text
+DAG readers -> Initialize() 创建 Reader -> Reader 收消息 -> func -> Process(msg) -> Proc(msg)
+```
+
+所以 `VelodyneConvertComponent::Proc` 的直接调用者，不是你手写的代码，而是 `component.h` 里 `Initialize()` 构造出来的框架回调。
+
+#### 2. 发送数据方
+
+发送链路是：
+
+```text
+业务 Init() 创建 writer -> 业务 Proc() 调用 writer_->Write(msg) -> 下游 reader 收到消息
+```
+
+也就是说发送方不是框架自动帮你“回调发消息”，而是业务组件自己在 `Init()` 里创建 writer，然后在 `Proc()` 里主动写出去。
+
+### 以 VelodyneConvertComponent 为例
+
+它的输入和输出分别是：
+
+- 输入：`VelodyneScan`
+- 输出：`PointCloud`
+
+所以完整链路就是：
+
+```text
+/apollo/sensor/lidar16/Scan
+  -> VelodyneConvertComponent::Proc(scan_msg)
+  -> 转成 PointCloud
+  -> writer_->Write(point_cloud)
+  -> /apollo/sensor/lidar16/PointCloud2
+```
+
+---
+
+## 19. 把整段 `Initialize()` 重组成人话
 
 如果不按源码顺序，而是按“它到底完成了什么”来重组，这段逻辑其实就是：
 

@@ -1,0 +1,37 @@
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+start
+:读取 DAG 配置;
+:ClassLoader 动态加载组件类;
+:创建组件对象\n如 VelodyneConvertComponent;
+:调用 Component<M0>::Initialize(config);
+:创建 node_\nnode_.reset(new Node(config.name()));
+:LoadConfigFiles(config)\n加载 config_file_path / flag_file_path;
+:调用业务 Init();
+:业务组件准备资源\n读配置 / 建 writer / 建对象池;
+:从 config.readers(0) 组装 ReaderConfig;
+:构造框架回调 func;
+if (reality mode?) then (yes)
+  :CreateReader<M0>(reader_cfg)\n创建裸 reader;
+  :创建 DataVisitor;
+  :CreateRoutineFactory<M0>(func, dv);
+  :scheduler->CreateTask(factory, node_->Name());
+else (no)
+  :CreateReader<M0>(reader_cfg, func)\n直接绑定回调;
+endif
+:reader 放入 readers_;
+:channel 来消息;
+:Reader 收到消息\n如 /apollo/sensor/lidar16/Scan;
+:框架回调 func 被触发;
+:调用 Process(msg);
+:调用业务 Proc(msg);
+:VelodyneConvertComponent::Proc(scan_msg);
+:ConvertPacketsToPointcloud(scan_msg, point_cloud);
+:VelodyneParser::GeneratePointcloud(...);
+:writer_->Write(point_cloud);
+:发布到输出 channel\n如 /apollo/sensor/lidar16/PointCloud2;
+stop
+@enduml

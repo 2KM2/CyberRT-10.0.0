@@ -587,7 +587,47 @@ Velodyne 这条链就是这个模式的具体落地版本。
 
 ## 13. 把整条链压成一张图
 
-如果只看最关键的数据流，可以画成：
+先给出完整的 PlantUML 链路图，把“硬件收包 -> driver 组帧 -> 发布 `Scan` -> component 接收 -> `Proc()` -> 发布 `PointCloud`”串成一条完整路径。
+
+```plantuml
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+start
+:Velodyne 激光雷达硬件持续发 UDP 报文;
+fork
+  :positioning UDP 包进入 positioning_data_port;
+  :SocketInput::get_positioning_data_packet();
+  :exract_nmea_time_from_packet();
+  :SetBaseTimeFromNmeaTime();
+  :建立 basetime_;
+fork again
+  :firing UDP 包进入 firing_data_port;
+  :SocketInput::get_firing_data_packet();
+  :生成单个 VelodynePacket;
+  :VelodyneDriver::PollStandard() 连续收包;
+  :多个 VelodynePacket 组装成 VelodyneScan;
+  :scan 写入 basetime / frame_id / model / mode;
+end fork
+:driver 的 writer_->Write(scan);
+:发布到 scan_channel\n如 /apollo/sensor/lidar16/front/center/Scan;
+:VelodyneConvertComponent 的 Reader<VelodyneScan> 收到消息;
+:component 框架回调触发;
+:Process(scan_msg);
+:VelodyneConvertComponent::Proc(scan_msg);
+:ConvertPacketsToPointcloud(scan_msg, point_cloud);
+:VelodyneParser::GeneratePointcloud(...);
+:得到 PointCloud;
+:component 内部 writer_->Write(point_cloud);
+:发布到 convert_channel_name\n如 /apollo/sensor/lidar16/front/center/PointCloud2;
+:CompensatorComponent / 后续感知模块继续消费;
+stop
+@enduml
+```
+
+如果只看最关键的数据流，也可以压缩成：
 
 ```text
 激光雷达硬件
@@ -607,7 +647,7 @@ Velodyne 这条链就是这个模式的具体落地版本。
   -> CompensatorComponent / 后续感知模块
 ```
 
-如果再把时间同步并进去，更完整的是：
+如果只把时间同步单独抽出来，则是：
 
 ```text
 positioning UDP 包
