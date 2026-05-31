@@ -1,0 +1,83 @@
+@startuml
+skinparam shadowing false
+skinparam monochrome true
+skinparam defaultTextAlignment center
+
+package "Component Layer\n业务执行层" {
+  class ComponentBase
+  class "Component<M...>" as ComponentMsg
+  class TimerComponent
+}
+
+package "Node Layer\n通信门面层" {
+  class Node
+  class NodeChannelImpl
+  class "Reader<T>" as ReaderT
+  class "Writer<T>" as WriterT
+}
+
+package "Transport Layer\n消息传输层" {
+  class "Receiver<T>" as ReceiverT
+  class "Transmitter<T>" as TransmitterT
+  class HybridReceiver
+  class HybridTransmitter
+  class Dispatcher
+}
+
+package "Scheduler Layer\n执行调度层" {
+  class Scheduler
+  class Processor
+  class CRoutine
+  class RoutineFactory
+  class DataVisitor
+}
+
+ComponentBase <|-- ComponentMsg
+ComponentBase <|-- TimerComponent
+
+ComponentMsg --> Node : 持有 node_
+TimerComponent --> Node : 持有 node_
+ComponentMsg --> ReaderT : readers_
+ComponentMsg --> DataVisitor : 创建
+ComponentMsg --> RoutineFactory : 创建
+ComponentMsg --> Scheduler : CreateTask()
+TimerComponent --> Scheduler : 通过 Timer 间接接入
+
+Node --> NodeChannelImpl : channel 相关实现
+Node --> ReaderT : CreateReader()
+Node --> WriterT : CreateWriter()
+
+ReaderT --> ReceiverT : 内部持有
+WriterT --> TransmitterT : 内部持有
+
+ReceiverT --> HybridReceiver
+TransmitterT --> HybridTransmitter
+HybridReceiver --> Dispatcher : 分发消息
+HybridTransmitter --> Dispatcher : 选择链路后投递
+
+Scheduler --> Processor : 管理工作线程
+Scheduler --> CRoutine : 管理协程任务
+RoutineFactory --> CRoutine : 创建任务体
+DataVisitor --> Scheduler : 为调度提供可访问消息
+
+note right of ComponentMsg
+业务只实现 Init() / Proc(...)
+框架替它完成 reader / task 装配
+end note
+
+note right of Node
+统一门面
+向上隐藏 transport 细节
+end note
+
+note right of TransmitterT
+消息真正发出去的地方
+根据关系选择 INTRA / SHM / RTPS
+end note
+
+note right of Scheduler
+不传消息
+只负责把消息就绪
+变成线程上的执行
+end note
+@enduml
